@@ -365,6 +365,37 @@ export const getCompanias = async () => {
   }
 };
 
+// Función para actualizar información médica de un participante
+export const actualizarInformacionMedica = async (
+  id: number,
+  data: {
+    dieta?: "Si" | "No";
+    obs_dieta?: string;
+    alergia_alimento?: "Si" | "No";
+    alergia_medicamento?: "Si" | "No";
+    alergia_polvo_pelos_acaro?: "Si" | "No";
+  }
+) => {
+  try {
+    const response = await axios.put(`${BASE_URL}/part/${id}/medical-info`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error al actualizar información médica:", error);
+    throw error;
+  }
+};
+
+// Función para obtener todos los participantes con información médica
+export const getParticipantesConInfoMedica = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/part/medical-info/all`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener participantes con info médica:", error);
+    throw error;
+  }
+};
+
 // ============================================================================
 // FUNCIONES DE IMPORTACIÓN MASIVA
 // ============================================================================

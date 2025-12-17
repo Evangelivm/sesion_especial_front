@@ -48,6 +48,8 @@ import {
 import { useMobile } from "@/hooks/use-mobile";
 import RadialMenu from "@/components/radial-menu";
 import { getHistorialAtenciones, getParticipantes } from "@/lib/connections";
+import ModalInformacionMedica from "@/components/modal-informacion-medica";
+import ModalDietasAlergias from "@/components/modal-dietas-alergias";
 // Tipos de datos
 interface MedicamentoRecetado {
   frecuencia: string;
@@ -68,6 +70,11 @@ interface AtencionMedica {
   datos: {
     id: number;
     nombre_completo: string;
+    dieta: string | null;
+    obs_dieta?: string | null;
+    alergia_alimento?: string | null;
+    alergia_medicamento?: string | null;
+    alergia_polvo_pelos_acaro?: string | null;
   };
   medicinas_recetadas: MedicamentoRecetado[];
 }
@@ -96,6 +103,8 @@ export default function HistorialAtencionesPage() {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const isMobile = useMobile();
+  const [modalMedicoAbierto, setModalMedicoAbierto] = useState(false);
+  const [modalDietasAbierto, setModalDietasAbierto] = useState(false);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -282,6 +291,13 @@ export default function HistorialAtencionesPage() {
           >
             Inventario
           </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setModalDietasAbierto(true)}
+          >
+            Dietas y Alergias
+          </Button>
         </div>
       </div>
       {/* Barra de búsqueda y filtros */}
@@ -438,9 +454,16 @@ export default function HistorialAtencionesPage() {
                           {formatearHora(atencion.fecha_consulta)}
                         </span>
                       </div>
-                      <h3 className="font-medium mt-1">
-                        {atencion.datos.nombre_completo}
-                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <h3 className="font-medium">
+                          {atencion.datos.nombre_completo}
+                        </h3>
+                        {atencion.datos.dieta === "Si" && (
+                          <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none text-xs px-2 py-0.5 font-bold">
+                            D
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-slate-600 mt-1">
                         {atencion.motivo_consulta}
                       </p>
@@ -504,7 +527,7 @@ export default function HistorialAtencionesPage() {
           </DialogHeader>
           {atencionSeleccionada && (
             <div className="space-y-4 py-4 text-sm">
-              <div>
+              <div className="flex items-center gap-2">
                 <strong>Participante:</strong>{" "}
                 <Button
                   variant="link"
@@ -513,6 +536,11 @@ export default function HistorialAtencionesPage() {
                 >
                   {atencionSeleccionada.datos.nombre_completo}
                 </Button>
+                {atencionSeleccionada.datos.dieta === "Si" && (
+                  <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none text-xs px-2 py-0.5 font-bold">
+                    D
+                  </Badge>
+                )}
               </div>
               <p>
                 <strong>Fecha de Consulta:</strong>{" "}
@@ -570,7 +598,14 @@ export default function HistorialAtencionesPage() {
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setModalMedicoAbierto(true)}
+            >
+              Actualizar Información Médica
+            </Button>
             <DialogClose asChild>
               <Button type="button" variant="secondary">
                 Cerrar
@@ -579,6 +614,41 @@ export default function HistorialAtencionesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal para actualizar información médica */}
+      {atencionSeleccionada && (
+        <ModalInformacionMedica
+          open={modalMedicoAbierto}
+          onOpenChange={setModalMedicoAbierto}
+          participanteId={atencionSeleccionada.datos.id}
+          participanteNombre={atencionSeleccionada.datos.nombre_completo}
+          datosActuales={{
+            dieta: atencionSeleccionada.datos.dieta,
+            obs_dieta: atencionSeleccionada.datos.obs_dieta,
+            alergia_alimento: atencionSeleccionada.datos.alergia_alimento,
+            alergia_medicamento: atencionSeleccionada.datos.alergia_medicamento,
+            alergia_polvo_pelos_acaro: atencionSeleccionada.datos.alergia_polvo_pelos_acaro,
+          }}
+          onSuccess={() => {
+            // Recargar los datos
+            const fetchData = async () => {
+              try {
+                const historial = await getHistorialAtenciones();
+                setAtencionesOriginales(historial);
+              } catch (error) {
+                console.error("Error al recargar datos:", error);
+              }
+            };
+            fetchData();
+          }}
+        />
+      )}
+
+      {/* Modal de Dietas y Alergias */}
+      <ModalDietasAlergias
+        open={modalDietasAbierto}
+        onOpenChange={setModalDietasAbierto}
+      />
     </main>
   );
 }

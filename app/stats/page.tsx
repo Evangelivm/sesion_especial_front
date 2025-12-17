@@ -91,11 +91,23 @@ function App() {
       try {
         const parsedMessage =
           typeof message === "string" ? JSON.parse(message) : message;
-        const newMessages = Array.isArray(parsedMessage)
-          ? parsedMessage
-          : [parsedMessage];
 
-        const validMessages = newMessages.filter(
+        // Verificar si el mensaje tiene la nueva estructura con metadata
+        let participantesData: any[];
+        let changedCompany: number | undefined;
+
+        if (parsedMessage.data && Array.isArray(parsedMessage.data)) {
+          // Nueva estructura: { data: [...], changedCompany: X }
+          participantesData = parsedMessage.data;
+          changedCompany = parsedMessage.changedCompany;
+        } else if (Array.isArray(parsedMessage)) {
+          // Estructura antigua: [...]
+          participantesData = parsedMessage;
+        } else {
+          participantesData = [parsedMessage];
+        }
+
+        const validMessages = participantesData.filter(
           (msg) =>
             msg &&
             typeof msg === "object" &&
@@ -109,36 +121,45 @@ function App() {
         );
 
         if (validMessages.length > 0) {
-          // Contar asistentes actuales por compañía
-          const currentPresent: Record<number, number> = {};
-          validMessages.forEach((participant) => {
-            const companyId = participant.compañia;
-            if (!currentPresent[companyId]) {
-              currentPresent[companyId] = 0;
-            }
-            if (participant.asistio === "Si") {
-              currentPresent[companyId]++;
-            }
-          });
-
-          // Detectar cambios en asistencia para múltiples compañías
-          const changedCompanyIds = Object.entries(currentPresent)
-            .filter(([companyId, present]) => {
-              const previousPresent =
-                previousDataRef.current[Number(companyId)] || 0;
-              return present !== previousPresent;
-            })
-            .map(([companyId]) => Number(companyId));
-
           // Actualizar datos
           const transformedData = transformStatsToCompanies(validMessages);
           setCompanies(transformedData);
 
-          // Actualizar referencia y estado
-          previousDataRef.current = currentPresent;
+          // Determinar qué compañía(s) animar
+          let companiesToHighlight: number[] = [];
 
-          if (changedCompanyIds.length > 0) {
-            setUpdatedCompanyIds(changedCompanyIds);
+          if (changedCompany !== undefined) {
+            // Si el backend nos dice específicamente qué compañía cambió, usar ese dato
+            companiesToHighlight = [changedCompany];
+            console.log(`Compañía ${changedCompany} actualizada`);
+          } else {
+            // Fallback: detectar cambios comparando con el estado anterior
+            const currentPresent: Record<number, number> = {};
+            validMessages.forEach((participant) => {
+              const companyId = participant.compañia;
+              if (!currentPresent[companyId]) {
+                currentPresent[companyId] = 0;
+              }
+              if (participant.asistio === "Si") {
+                currentPresent[companyId]++;
+              }
+            });
+
+            companiesToHighlight = Object.entries(currentPresent)
+              .filter(([companyId, present]) => {
+                const previousPresent =
+                  previousDataRef.current[Number(companyId)] || 0;
+                return present !== previousPresent;
+              })
+              .map(([companyId]) => Number(companyId));
+
+            // Actualizar referencia
+            previousDataRef.current = currentPresent;
+          }
+
+          // Animar las compañías que cambiaron
+          if (companiesToHighlight.length > 0) {
+            setUpdatedCompanyIds(companiesToHighlight);
             setTimeout(() => {
               setUpdatedCompanyIds([]);
             }, 2000);

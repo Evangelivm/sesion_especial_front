@@ -144,10 +144,11 @@ export default function ProfilePage() {
   // Formatear fecha y hora
   const formatearFecha = (
     isoString: string,
-    formatType: "short" | "long" = "short"
+    formatType: "short" | "long" = "short",
+    useTimezone: boolean = true // Si es false, no aplica conversión de zona horaria
   ) => {
     if (!isoString) return "";
-    const date = dayjs.utc(isoString).local();
+    const date = useTimezone ? dayjs.utc(isoString).local() : dayjs(isoString);
     if (formatType === "long") {
       return date.format("DD [de] MMMM [del] YYYY");
     }
@@ -492,7 +493,8 @@ export default function ProfilePage() {
                         : participanteData.nacimiento
                         ? `${formatearFecha(
                             participanteData.nacimiento,
-                            "long"
+                            "long",
+                            false
                           )} (${participanteData.edad} años)`
                         : `${participanteData.edad} años`}
                     </p>

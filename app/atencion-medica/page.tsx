@@ -59,8 +59,16 @@ import {
   getParticipantesSalud,
   getInventarioMedicamentos, // Import getInventarioMedicamentos
   registrarAtencion, // Import registrarAtencion
+  actualizarInformacionMedica,
 } from "@/lib/connections";
 import { useDebounce } from "@/hooks/use-debounce";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Tipos de datos
 interface Participante {
@@ -126,6 +134,14 @@ export default function AtencionMedicaPage() {
     useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
+  // Estados para actualizar alergias y dietas
+  const [actualizarAlergiasYDietas, setActualizarAlergiasYDietas] = useState(false);
+  const [dietaNueva, setDietaNueva] = useState<"Si" | "No">("No");
+  const [obsDietaNueva, setObsDietaNueva] = useState("");
+  const [alergiaAlimentoNueva, setAlergiaAlimentoNueva] = useState<"Si" | "No">("No");
+  const [alergiaMedicamentoNueva, setAlergiaMedicamentoNueva] = useState<"Si" | "No">("No");
+  const [alergiaPolvoNueva, setAlergiaPolvoNueva] = useState<"Si" | "No">("No");
+
   // Refs for step content animations
   const paso1Ref = useRef<HTMLDivElement>(null);
   const paso2Ref = useRef<HTMLDivElement>(null);
@@ -163,6 +179,17 @@ export default function AtencionMedicaPage() {
       }));
     }
   }, [seDioMedicamentos]);
+
+  // Cargar datos actuales cuando se marca "Actualizar Alergias y Dietas"
+  useEffect(() => {
+    if (actualizarAlergiasYDietas && participanteSeleccionado) {
+      setDietaNueva(participanteSeleccionado.dieta || "No");
+      setObsDietaNueva(participanteSeleccionado.obs_dieta || "");
+      setAlergiaAlimentoNueva(participanteSeleccionado.alergia_alimento || "No");
+      setAlergiaMedicamentoNueva(participanteSeleccionado.alergia_medicamento || "No");
+      setAlergiaPolvoNueva(participanteSeleccionado.alergia_polvo_pelos_acaro || "No");
+    }
+  }, [actualizarAlergiasYDietas, participanteSeleccionado]);
 
   // Animation timeline ref
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
@@ -331,6 +358,17 @@ export default function AtencionMedicaPage() {
       );
     }
     try {
+      // Actualizar información médica si está marcado
+      if (actualizarAlergiasYDietas && participanteId) {
+        await actualizarInformacionMedica(participanteId, {
+          dieta: dietaNueva,
+          obs_dieta: obsDietaNueva || undefined,
+          alergia_alimento: alergiaAlimentoNueva,
+          alergia_medicamento: alergiaMedicamentoNueva,
+          alergia_polvo_pelos_acaro: alergiaPolvoNueva,
+        });
+      }
+
       await registrarAtencion(dataToSend);
       toast.success("Atención médica registrada correctamente");
       router.push("/historial-atenciones");
@@ -623,6 +661,44 @@ export default function AtencionMedicaPage() {
                           {participanteSeleccionado.alergia_med || "Ninguna"}
                         </span>
                       </div>
+                      <div className="flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-2 text-blue-600" />
+                        <span>
+                          <span className="font-medium">
+                            Alergia a Alimentos:
+                          </span>{" "}
+                          {participanteSeleccionado.alergia_alimento === "Si" ? "Sí" : "No"}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-2 text-blue-600" />
+                        <span>
+                          <span className="font-medium">
+                            Alergia a Polvo/Pelos/Ácaros:
+                          </span>{" "}
+                          {participanteSeleccionado.alergia_polvo_pelos_acaro === "Si" ? "Sí" : "No"}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-2 text-blue-600" />
+                        <span>
+                          <span className="font-medium">
+                            Dieta Especial:
+                          </span>{" "}
+                          {participanteSeleccionado.dieta === "Si" ? "Sí" : "No"}
+                        </span>
+                      </div>
+                      {participanteSeleccionado.dieta === "Si" && participanteSeleccionado.obs_dieta && (
+                        <div className="flex items-start">
+                          <AlertCircle className="h-4 w-4 mr-2 mt-0.5 text-blue-600 flex-shrink-0" />
+                          <span>
+                            <span className="font-medium">
+                              Observaciones de Dieta:
+                            </span>{" "}
+                            {participanteSeleccionado.obs_dieta}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Alertas de Alergias */}
@@ -983,6 +1059,132 @@ export default function AtencionMedicaPage() {
                           })
                         }
                       />
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Checkbox para actualizar alergias y dietas */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="actualizarAlergiasYDietas"
+                    checked={actualizarAlergiasYDietas}
+                    onCheckedChange={(checked) =>
+                      setActualizarAlergiasYDietas(checked as boolean)
+                    }
+                  />
+                  <Label
+                    htmlFor="actualizarAlergiasYDietas"
+                    className="cursor-pointer"
+                  >
+                    Actualizar Alergias y Dietas
+                  </Label>
+                </div>
+
+                {/* Formulario de alergias y dietas */}
+                {actualizarAlergiasYDietas && (
+                  <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-4">
+                    <h4 className="font-medium text-slate-700">
+                      Información de Dietas y Alergias
+                    </h4>
+
+                    {/* Dieta Especial */}
+                    <div className="space-y-2">
+                      <Label htmlFor="dietaNueva">Dieta Especial</Label>
+                      <Select
+                        value={dietaNueva}
+                        onValueChange={(value) =>
+                          setDietaNueva(value as "Si" | "No")
+                        }
+                      >
+                        <SelectTrigger id="dietaNueva">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Si">Sí</SelectItem>
+                          <SelectItem value="No">No</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Observaciones de dieta (solo si dieta es "Si") */}
+                    {dietaNueva === "Si" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="obsDietaNueva">
+                          Observaciones de Dieta
+                        </Label>
+                        <Textarea
+                          id="obsDietaNueva"
+                          placeholder="Describe las restricciones o requerimientos especiales..."
+                          value={obsDietaNueva}
+                          onChange={(e) => setObsDietaNueva(e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+                    )}
+
+                    {/* Alergia a alimentos */}
+                    <div className="space-y-2">
+                      <Label htmlFor="alergiaAlimentoNueva">
+                        Alergia a Alimentos
+                      </Label>
+                      <Select
+                        value={alergiaAlimentoNueva}
+                        onValueChange={(value) =>
+                          setAlergiaAlimentoNueva(value as "Si" | "No")
+                        }
+                      >
+                        <SelectTrigger id="alergiaAlimentoNueva">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Si">Sí</SelectItem>
+                          <SelectItem value="No">No</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Alergia a medicamentos */}
+                    <div className="space-y-2">
+                      <Label htmlFor="alergiaMedicamentoNueva">
+                        Alergia a Medicamentos
+                      </Label>
+                      <Select
+                        value={alergiaMedicamentoNueva}
+                        onValueChange={(value) =>
+                          setAlergiaMedicamentoNueva(value as "Si" | "No")
+                        }
+                      >
+                        <SelectTrigger id="alergiaMedicamentoNueva">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Si">Sí</SelectItem>
+                          <SelectItem value="No">No</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Alergia a polvo/pelos/ácaros */}
+                    <div className="space-y-2">
+                      <Label htmlFor="alergiaPolvoNueva">
+                        Alergia a Polvo/Pelos/Ácaros
+                      </Label>
+                      <Select
+                        value={alergiaPolvoNueva}
+                        onValueChange={(value) =>
+                          setAlergiaPolvoNueva(value as "Si" | "No")
+                        }
+                      >
+                        <SelectTrigger id="alergiaPolvoNueva">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Si">Sí</SelectItem>
+                          <SelectItem value="No">No</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}
