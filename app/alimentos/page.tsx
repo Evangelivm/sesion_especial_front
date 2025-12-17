@@ -25,7 +25,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { getStats } from "@/lib/connections";
+import { socket } from "@/lib/socket";
 import { toast } from "sonner";
 
 interface ParticipanteStats {
@@ -59,19 +59,42 @@ export default function AlimentosPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getStats();
-        setParticipantes(data);
-      } catch (error) {
-        toast.error("Error al cargar los datos de participantes");
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const channel = "alimentos-stats";
 
-    fetchData();
+    // Suscribirse al canal de WebSocket
+    socket.emit("subscribeToAlimentosStats");
+
+    // Escuchar actualizaciones en tiempo real
+    socket.on(channel, (message: any) => {
+      try {
+        const parsedMessage =
+          typeof message === "string" ? JSON.parse(message) : message;
+        const data = Array.isArray(parsedMessage)
+          ? parsedMessage
+          : [parsedMessage];
+
+        setParticipantes(data);
+        setLoading(false);
+
+        console.log("Datos de alimentos actualizados en tiempo real");
+      } catch (error) {
+        console.error("Error al procesar mensaje de WebSocket:", error);
+        toast.error("Error al procesar actualización de datos");
+      }
+    });
+
+    // Manejar errores de conexión
+    socket.on("error", (error: any) => {
+      console.error("Error de WebSocket:", error);
+      toast.error("Error de conexión con el servidor");
+      setLoading(false);
+    });
+
+    // Cleanup al desmontar el componente
+    return () => {
+      socket.off(channel);
+      socket.off("error");
+    };
   }, []);
 
   // Calcular estadísticas

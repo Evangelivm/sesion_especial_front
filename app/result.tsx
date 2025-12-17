@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { confirmarAsistencia } from "@/lib/connections";
 import { toast } from "sonner";
+import { useState, useEffect } from "react";
 
 interface ParticipanteInfo {
   id: number;
@@ -26,6 +27,27 @@ export const ResultadosParticipante: React.FC<ResultadosParticipanteProps> = ({
   participanteInfo,
   onAsistenciaConfirmada,
 }) => {
+  const [isButtonDisabled, setIsButtonDisabled] = useState(true);
+  const [countdown, setCountdown] = useState(2);
+
+  useEffect(() => {
+    // Deshabilitar el botón por 2 segundos cuando aparece el componente
+    setIsButtonDisabled(true);
+    setCountdown(2);
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setIsButtonDisabled(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [participanteInfo.id]);
   const handleConfirmarAsistencia = async () => {
     try {
       //console.log("Confirmando asistencia para ID:", participanteInfo.id);
@@ -108,10 +130,12 @@ export const ResultadosParticipante: React.FC<ResultadosParticipanteProps> = ({
           <Button
             className="w-full mt-4 bg-[#2B5F7F] hover:bg-[#2B5F7F]/80 text-white font-semibold shadow-md disabled:opacity-50"
             onClick={handleConfirmarAsistencia}
-            disabled={participanteInfo.asistio === "Si"}
+            disabled={participanteInfo.asistio === "Si" || isButtonDisabled}
           >
             {participanteInfo.asistio === "Si"
               ? "Asistencia Confirmada"
+              : isButtonDisabled
+              ? `Espere ${countdown} segundo${countdown !== 1 ? 's' : ''}...`
               : "Confirmar Asistencia"}
           </Button>
         </div>
