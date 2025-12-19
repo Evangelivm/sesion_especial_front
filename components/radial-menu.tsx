@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import gsap from "gsap";
 import { AutocompleteInput } from "@/components/autocomplete-input";
-import { getParticipantes } from "@/lib/connections";
+import { getParticipantes, getCompanias } from "@/lib/connections";
 
 interface RadialMenuOption {
   id: string;
@@ -65,6 +65,8 @@ export default function RadialMenu({
   const [selectedParticipanteId, setSelectedParticipanteId] = useState<
     number | null
   >(null);
+  const [companyGroups, setCompanyGroups] = useState<CompanyGroup[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<(HTMLDivElement | null)[]>([]);
   const companyGroupsRef = useRef<(HTMLDivElement | null)[]>([]);
@@ -81,76 +83,6 @@ export default function RadialMenu({
     isBack: true,
   };
 
-  // Company groups with their individual companies
-  const companyGroups: CompanyGroup[] = [
-    {
-      id: "g1",
-      range: "1-5",
-      companies: [
-        { id: "c1", name: "C1" },
-        { id: "c2", name: "C2" },
-        { id: "c3", name: "C3" },
-        { id: "c4", name: "C4" },
-        { id: "c5", name: "C5" },
-      ],
-    },
-    {
-      id: "g2",
-      range: "6-10",
-      companies: [
-        { id: "c6", name: "C6" },
-        { id: "c7", name: "C7" },
-        { id: "c8", name: "C8" },
-        { id: "c9", name: "C9" },
-        { id: "c10", name: "C10" },
-      ],
-    },
-    {
-      id: "g3",
-      range: "11-15",
-      companies: [
-        { id: "c11", name: "C11" },
-        { id: "c12", name: "C12" },
-        { id: "c13", name: "C13" },
-        { id: "c14", name: "C14" },
-        { id: "c15", name: "C15" },
-      ],
-    },
-    {
-      id: "g4",
-      range: "16-20",
-      companies: [
-        { id: "c16", name: "C16" },
-        { id: "c17", name: "C17" },
-        { id: "c18", name: "C18" },
-        { id: "c19", name: "C19" },
-        { id: "c20", name: "C20" },
-      ],
-    },
-    {
-      id: "g5",
-      range: "21-25",
-      companies: [
-        { id: "c21", name: "C21" },
-        { id: "c22", name: "C22" },
-        { id: "c23", name: "C23" },
-        { id: "c24", name: "C24" },
-        { id: "c25", name: "C25" },
-      ],
-    },
-    {
-      id: "g6",
-      range: "26-30",
-      companies: [
-        { id: "c26", name: "C26" },
-        { id: "c27", name: "C27" },
-        { id: "c28", name: "C28" },
-        { id: "c29", name: "C29" },
-        { id: "c30", name: "C30" },
-      ],
-    },
-  ];
-
   // Map icon strings to Lucide components
   const iconMap: Record<string, LucideIcon> = {
     Users,
@@ -161,6 +93,12 @@ export default function RadialMenu({
     CalendarCheck,
     BarChart2,
   };
+
+  // Get the current companies to display based on active group
+  const currentCompanies =
+    activeGroupIndex !== null
+      ? [...companyGroups[activeGroupIndex].companies, backOption]
+      : [];
 
   // Initialize GSAP animations
   useEffect(() => {
@@ -245,6 +183,51 @@ export default function RadialMenu({
     fetchParticipantes();
   }, []);
 
+  // Load companies and create groups dynamically
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setIsLoadingCompanies(true);
+      try {
+        const companiesData = await getCompanias();
+
+        // Filter out "Staff" company (usually id_comp=1 or comp="Staff")
+        const filteredCompanies = companiesData.filter((company: any) =>
+          company.comp !== "Staff" && company.id_comp !== 1
+        );
+
+        // Generate company groups dynamically (5 companies per group)
+        const companiesPerGroup = 5;
+        const groups: CompanyGroup[] = [];
+
+        for (let i = 0; i < filteredCompanies.length; i += companiesPerGroup) {
+          const groupCompanies = filteredCompanies.slice(i, i + companiesPerGroup);
+          const groupNumber = Math.floor(i / companiesPerGroup) + 1;
+          const startNum = i + 1;
+          const endNum = Math.min(i + companiesPerGroup, filteredCompanies.length);
+
+          groups.push({
+            id: `g${groupNumber}`,
+            range: `${startNum}-${endNum}`,
+            companies: groupCompanies.map((company: any) => ({
+              id: `c${company.id_comp}`,
+              name: company.comp,
+            })),
+          });
+        }
+
+        setCompanyGroups(groups);
+      } catch (error) {
+        console.error("Error al cargar compañías:", error);
+        // If there's an error, set empty groups
+        setCompanyGroups([]);
+      } finally {
+        setIsLoadingCompanies(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
   // Handle input appearance and disappearance
   useEffect(() => {
     if (showInput) {
@@ -325,7 +308,8 @@ export default function RadialMenu({
       });
 
       // Hide individual companies if they were showing
-      companiesRef.current.forEach((ref) => {
+      // Only animate valid refs (filter out null/undefined)
+      companiesRef.current.filter(ref => ref !== null).forEach((ref) => {
         if (ref) {
           gsap.to(ref, {
             opacity: 0,
@@ -394,6 +378,18 @@ export default function RadialMenu({
   // Handle individual companies appearance and disappearance
   useEffect(() => {
     if (showCompanies && activeGroupIndex !== null) {
+      // Hide original menu options
+      optionsRef.current.forEach((ref) => {
+        if (ref) {
+          gsap.to(ref, {
+            opacity: 0,
+            scale: 0,
+            duration: 0.3,
+            ease: "back.in(1.7)",
+          });
+        }
+      });
+
       // Hide company groups
       companyGroupsRef.current.forEach((ref) => {
         if (ref) {
@@ -406,8 +402,9 @@ export default function RadialMenu({
         }
       });
 
-      // Animate individual companies with stagger
-      companiesRef.current.forEach((ref, index) => {
+      // Animate individual companies with stagger (only current companies)
+      const currentCompaniesCount = currentCompanies.length;
+      companiesRef.current.slice(0, currentCompaniesCount).forEach((ref, index) => {
         if (ref) {
           gsap.fromTo(
             ref,
@@ -424,7 +421,8 @@ export default function RadialMenu({
       });
     } else if (!showCompanyGroups) {
       // Hide individual companies if they were showing and not showing company groups
-      companiesRef.current.forEach((ref) => {
+      // Only animate valid refs (filter out null/undefined)
+      companiesRef.current.filter(ref => ref !== null).forEach((ref) => {
         if (ref) {
           gsap.to(ref, {
             opacity: 0,
@@ -435,7 +433,13 @@ export default function RadialMenu({
         }
       });
     }
-  }, [showCompanies, activeGroupIndex, showCompanyGroups]);
+  }, [showCompanies, activeGroupIndex, showCompanyGroups, currentCompanies.length]);
+
+  // Clean up company refs when switching groups
+  useEffect(() => {
+    // Reset the companiesRef array to match the current companies length
+    companiesRef.current = companiesRef.current.slice(0, currentCompanies.length);
+  }, [activeGroupIndex, currentCompanies.length]);
 
   // Handle mouse movement (for desktop)
   useEffect(() => {
@@ -448,8 +452,10 @@ export default function RadialMenu({
         } else if (showCompanies) {
           setShowCompanies(false);
           setShowCompanyGroups(true);
+          setActiveGroupIndex(null); // Reset group selection when going back with ESC
         } else if (showCompanyGroups) {
           setShowCompanyGroups(false);
+          setActiveGroupIndex(null); // Reset when closing company groups
         } else {
           closeMenu();
         }
@@ -515,8 +521,10 @@ export default function RadialMenu({
 
     // Animar las compañías individuales si están visibles
     if (showCompanies) {
+      // Only animate valid company refs
+      const validCompanyRefs = companiesRef.current.filter(ref => ref !== null);
       closeTl.to(
-        companiesRef.current,
+        validCompanyRefs,
         {
           scale: 0,
           opacity: 0,
@@ -584,6 +592,7 @@ export default function RadialMenu({
         setShowCompanyGroups(true);
         setShowInput(false);
         setShowCompanies(false);
+        setActiveGroupIndex(null); // Reset group selection
       } else {
         // For other options, proceed with selection
         handleClick(index);
@@ -596,6 +605,7 @@ export default function RadialMenu({
     setShowInput(false); // Hide input if it was showing
     setShowCompanyGroups(false); // Hide company groups if they were showing
     setShowCompanies(false); // Hide individual companies if they were showing
+    setActiveGroupIndex(null); // Reset group selection on first click
 
     // Animate the clicked option
     if (optionsRef.current[index]) {
@@ -631,12 +641,24 @@ export default function RadialMenu({
     if (company.isBack) {
       setShowCompanies(false);
       setShowCompanyGroups(true);
+      setActiveGroupIndex(null); // Reset group selection when going back
       return;
     }
 
     // Handle individual company selection
-    console.log("Compañía seleccionada:", company.id);
-    onSelect(company.id);
+    // Extract company number from name (e.g., "C1" -> "1")
+    const companyNumber = company.name.replace('C', '');
+    console.log("Compañía seleccionada:", {
+      name: company.name,
+      id: company.id,
+      companyNumber
+    });
+
+    // Close menu and navigate to company page
+    closeMenu();
+    setTimeout(() => {
+      router.push(`/comp/${companyNumber}`);
+    }, 300);
   };
 
   const handleParticipanteSelect = (id: number) => {
@@ -656,11 +678,24 @@ export default function RadialMenu({
     if (optionIndex !== undefined || activeIndex !== null) {
       const selectedIndex =
         optionIndex !== undefined ? optionIndex : activeIndex;
+      const selectedOption = options[selectedIndex!];
+
+      // Define navigation routes for specific options
+      const navigationRoutes: Record<string, string> = {
+        statistics: '/stats',
+        registration: '/register',
+        attendance: '/',
+      };
 
       // Crear una nueva timeline para la animación de selección
       const selectTl = gsap.timeline({
         onComplete: () => {
-          onSelect(options[selectedIndex!].id);
+          // Check if this option has a specific navigation route
+          if (navigationRoutes[selectedOption.id]) {
+            router.push(navigationRoutes[selectedOption.id]);
+          } else {
+            onSelect(selectedOption.id);
+          }
         },
       });
 
@@ -731,12 +766,6 @@ export default function RadialMenu({
     }
   };
 
-  // Get the current companies to display based on active group
-  const currentCompanies =
-    activeGroupIndex !== null
-      ? [...companyGroups[activeGroupIndex].companies, backOption]
-      : [];
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -753,8 +782,10 @@ export default function RadialMenu({
           } else if (showCompanies) {
             setShowCompanies(false);
             setShowCompanyGroups(true);
+            setActiveGroupIndex(null); // Reset group selection when clicking outside
           } else if (showCompanyGroups) {
             setShowCompanyGroups(false);
+            setActiveGroupIndex(null); // Reset when closing company groups
           } else {
             closeMenu();
           }
@@ -849,6 +880,7 @@ export default function RadialMenu({
                       setShowCompanyGroups(true);
                       setShowInput(false);
                       setShowCompanies(false);
+                      setActiveGroupIndex(null); // Reset group selection
                     } else {
                       handleOptionClick(index, e);
                     }
@@ -873,7 +905,7 @@ export default function RadialMenu({
         })}
 
         {/* Company Groups */}
-        {companyGroups.map((group, index) => {
+        {showCompanyGroups && companyGroups.map((group, index) => {
           // Calculate position in the circle
           const angle = index * (360 / companyGroups.length) * (Math.PI / 180);
           const radius = 100;
@@ -902,7 +934,7 @@ export default function RadialMenu({
         })}
 
         {/* Individual Companies */}
-        {currentCompanies.map((company, index) => {
+        {showCompanies && currentCompanies.map((company, index) => {
           // Calculate position in the circle
           const angle =
             index * (360 / currentCompanies.length) * (Math.PI / 180);

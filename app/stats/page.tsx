@@ -58,19 +58,22 @@ const transformStatsToCompanies = (
   }, {} as Record<number, ParticipanteStats[]>);
 
   const companies = Object.entries(groupedByCompany).map(
-    ([companyId, participants]) => ({
-      id: parseInt(companyId),
-      name: `Compañía ${companyId}`,
-      participants: participants.map((p, index) => ({
-        id: index + 1,
-        name: p.nombres,
-        gender: p.sexo,
-        present: p.asistio === "Si",
-        stake: p.estaca,
-        ward: p.barrio,
-        location: p.habitacion,
-      })),
-    })
+    ([companyId, participants]) => {
+      const id = parseInt(companyId);
+      return {
+        id,
+        name: id === 1 ? "Staff" : `Compañía ${id - 1}`,
+        participants: participants.map((p, index) => ({
+          id: index + 1,
+          name: p.nombres,
+          gender: p.sexo,
+          present: p.asistio === "Si",
+          stake: p.estaca,
+          ward: p.barrio,
+          location: p.habitacion,
+        })),
+      };
+    }
   );
 
   return companies.sort((a, b) => a.id - b.id);
