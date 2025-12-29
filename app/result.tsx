@@ -132,9 +132,15 @@ export const ResultadosParticipante: React.FC<ResultadosParticipanteProps> = ({
           <Button
             className="w-full mt-4 bg-[#2B5F7F] hover:bg-[#2B5F7F]/80 text-white font-semibold shadow-md disabled:opacity-50"
             onClick={handleConfirmarAsistencia}
-            disabled={participanteInfo.asistio === "Si" || isButtonDisabled}
+            disabled={
+              participanteInfo.asistio === "Si" ||
+              isButtonDisabled ||
+              participanteInfo.compania === "SC"
+            }
           >
-            {participanteInfo.asistio === "Si"
+            {participanteInfo.compania === "SC"
+              ? "Participante sin Compañía, dirigirlo a la mesa de soluciones"
+              : participanteInfo.asistio === "Si"
               ? "Asistencia Confirmada"
               : isButtonDisabled
               ? `Espere ${countdown} segundo${countdown !== 1 ? 's' : ''}...`

@@ -25,6 +25,12 @@ import Comproom from "./comproom";
 import { registerParticipante } from "@/lib/connections";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { socket } from "@/lib/socket";
+
+interface AdminSettings {
+  soloStaff: boolean;
+  inscripcionesCerradas: boolean;
+}
 
 export default function Page() {
   const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
@@ -34,13 +40,63 @@ export default function Page() {
   const [edad, setEdad] = useState<number>(0);
   const [estaca, setEstaca] = useState<number>(0);
   const [barrio, setBarrio] = useState<number>(0);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // New state for loading
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [adminSettings, setAdminSettings] = useState<AdminSettings>({
+    soloStaff: false,
+    inscripcionesCerradas: false,
+  });
   const router = useRouter();
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log("Connected to WebSocket");
+      socket.emit("subscribeToAdminSettings");
+    });
+
+    socket.on("admin-settings", (message: string) => {
+      console.log("Received admin settings update:", message);
+      try {
+        const updatedSettings = JSON.parse(message);
+        setAdminSettings(updatedSettings);
+      } catch (error) {
+        console.error("Error parsing admin settings:", error);
+      }
+    });
+
+    // If already connected, subscribe immediately
+    if (socket.connected) {
+      socket.emit("subscribeToAdminSettings");
+    }
+
+    return () => {
+      socket.off("connect");
+      socket.off("admin-settings");
+    };
+  }, []);
+
+  // Fetch initial admin settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+        const response = await fetch(`${backendUrl}/admin/settings`);
+        if (response.ok) {
+          const data = await response.json();
+          setAdminSettings(data);
+        }
+      } catch (error) {
+        console.error("Error fetching admin settings:", error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   // Solo ejecutar cuando el componente se ha montado en el cliente
   useEffect(() => {
     // Inicializa la fecha de nacimiento y edad solo en el cliente
-    setFechaNacimiento(""); // Si deseas un valor inicial vacío o una fecha predeterminada
+    setFechaNacimiento("");
     setEdad(0);
   }, []);
 
@@ -54,15 +110,30 @@ export default function Page() {
       </header>
 
       <main className="container mx-auto md:py-4 md:px-20 p-4 space-y-6">
-        <Card className="bg-white/15 backdrop-blur border-none shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-[#015481]">Registro de Participante</CardTitle>
-            <CardDescription className="text-[#015481]/80">
-              Ingresa los datos del participante siguiendo la numeracion de cada
-              paso.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        {adminSettings.inscripcionesCerradas ? (
+          <Card className="bg-white/15 backdrop-blur border-none shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-[#015481] text-center">
+                Inscripciones Cerradas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center py-8">
+              <p className="text-lg text-[#015481] font-semibold">
+                Las inscripciones se cerraron, cualquier registro nuevo lo hará el
+                personal de registro
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-white/15 backdrop-blur border-none shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-[#015481]">Registro de Participante</CardTitle>
+              <CardDescription className="text-[#015481]/80">
+                Ingresa los datos del participante siguiendo la numeracion de cada
+                paso.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="apellidos" className="text-[#015481] font-semibold">1. Apellidos</Label>
@@ -164,6 +235,7 @@ export default function Page() {
             </Button>
           </CardContent>
         </Card>
+        )}
       </main>
     </div>
   );

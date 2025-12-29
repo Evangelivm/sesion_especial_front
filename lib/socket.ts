@@ -1,8 +1,8 @@
 "use client";
 
-import io from "socket.io-client";
+import { io } from "socket.io-client";
 
-// Conectar al servidor Socket.IO en el puerto 3000
+// Conectar al servidor Socket.IO (backend en puerto 3001)
 export const socket = io(
-  process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3000"
-); // Asegúrate de que tu servidor esté corriendo en este puerto
+  process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001"
+);

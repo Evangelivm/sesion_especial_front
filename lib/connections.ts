@@ -25,6 +25,7 @@ export const getParticipantes = async () => {
       id: participante.id,
       name: participante.name,
       compania: participante.compania || "N/A",
+      tipo: participante.tipo,
     }));
     return participantes;
   } catch (error) {
@@ -425,6 +426,76 @@ export const getHabitaciones = async () => {
     return response.data;
   } catch (error) {
     console.error("Error al obtener las habitaciones:", error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// FUNCIONES DE AUTENTICACIÓN
+// ============================================================================
+
+// Función para hacer login
+export const loginAdmin = async (username: string, password: string) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/admin/login`, {
+      username,
+      password,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al hacer login:", error);
+    throw error;
+  }
+};
+
+// Función para hacer logout
+export const logoutAdmin = async (token: string) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/admin/logout`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error al hacer logout:", error);
+    throw error;
+  }
+};
+
+// Función para validar token
+export const validateAdminToken = async (token: string) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/admin/validate`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al validar token:", error);
+    throw error;
+  }
+};
+
+// Función para actualizar configuración de admin (con autenticación)
+export const updateAdminSettings = async (
+  token: string,
+  settings: { soloStaff: boolean; inscripcionesCerradas: boolean }
+) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/admin/settings`, settings, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al actualizar configuración de admin:", error);
     throw error;
   }
 };
