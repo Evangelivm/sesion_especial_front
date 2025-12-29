@@ -190,9 +190,9 @@ export default function RadialMenu({
       try {
         const companiesData = await getCompanias();
 
-        // Filter out "Staff" company (usually id_comp=1 or comp="Staff")
+        // Filter out "SC" and "Staff" companies (id_comp=1 for SC, id_comp=2 for Staff)
         const filteredCompanies = companiesData.filter((company: any) =>
-          company.comp !== "Staff" && company.id_comp !== 1
+          company.id_comp !== 1 && company.id_comp !== 2
         );
 
         // Generate company groups dynamically (5 companies per group)
@@ -646,18 +646,18 @@ export default function RadialMenu({
     }
 
     // Handle individual company selection
-    // Extract company number from name (e.g., "C1" -> "1")
-    const companyNumber = company.name.replace('C', '');
+    // Extract id_comp from company.id (e.g., "c3" -> "3")
+    const companyId = company.id.replace('c', '');
     console.log("Compañía seleccionada:", {
       name: company.name,
       id: company.id,
-      companyNumber
+      companyId
     });
 
     // Close menu and navigate to company page
     closeMenu();
     setTimeout(() => {
-      router.push(`/comp/${companyNumber}`);
+      router.push(`/comp/${companyId}`);
     }, 300);
   };
 

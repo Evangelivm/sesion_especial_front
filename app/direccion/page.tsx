@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, Briefcase, Cake, Send } from "lucide-react";
+import { Users, UserCheck, Briefcase, Cake, Send, ArrowLeftRight, Home, UtensilsCrossed } from "lucide-react";
 import { getStats } from "@/lib/connections";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +19,7 @@ interface ParticipanteStats {
   compañia: number;
   habitacion: string;
   asistio: "Si" | "No";
+  nacimiento?: string;
 }
 
 export default function DireccionPage() {
@@ -36,22 +37,35 @@ export default function DireccionPage() {
       try {
         const data = await getStats();
 
-        // Contar participantes que asistieron (compañía > 1)
+        // Contar participantes que asistieron (compañía > 2)
         const participantesCount = data.filter(
-          (p) => p.asistio === "Si" && p.compañia > 1
+          (p) => p.asistio === "Si" && p.compañia > 2
         ).length;
 
-        // Contar staff que asistieron (compañía === 1)
+        // Contar staff que asistieron (compañía === 2)
         const staffCount = data.filter(
-          (p) => p.asistio === "Si" && p.compañia === 1
+          (p) => p.asistio === "Si" && p.compañia === 2
         ).length;
 
         setParticipantesAsistieron(participantesCount);
         setStaffAsistieron(staffCount);
 
-        // Por ahora, cumpleañeros estará vacío hasta que tengamos
-        // acceso a las fechas de nacimiento desde el backend
-        setCumpleaneros([]);
+        // Filtrar cumpleañeros del día
+        const hoy = new Date();
+        const diaHoy = hoy.getDate();
+        const mesHoy = hoy.getMonth() + 1; // Los meses en JS van de 0-11
+
+        const cumpleanerosHoy = data.filter((p) => {
+          if (!p.nacimiento) return false;
+
+          // Parsear la fecha de nacimiento sin timezone (formato: YYYY-MM-DD)
+          // Extraer directamente día y mes de la cadena sin conversiones de timezone
+          const [, mes, dia] = p.nacimiento.split('-').map(Number);
+
+          return dia === diaHoy && mes === mesHoy;
+        });
+
+        setCumpleaneros(cumpleanerosHoy);
 
       } catch (error) {
         console.error("Error al obtener los datos:", error);
@@ -75,6 +89,11 @@ export default function DireccionPage() {
 
       setParticipantesAsistieron(stats.participantesAsistieron);
       setStaffAsistieron(stats.staffAsistieron);
+
+      // Actualizar cumpleañeros si vienen en la respuesta
+      if (stats.cumpleaneros) {
+        setCumpleaneros(stats.cumpleaneros);
+      }
     });
 
     // Cleanup al desmontar
@@ -229,6 +248,66 @@ export default function DireccionPage() {
           </Card>
         </div>
 
+        {/* Accesos Rápidos */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-[#015481]">Accesos Rápidos</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card Permutas */}
+            <Card
+              className="bg-white/90 backdrop-blur border-none shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              onClick={() => router.push("/permuta")}
+            >
+              <CardHeader>
+                <CardTitle className="text-[#2B5F7F] flex items-center gap-2">
+                  <ArrowLeftRight className="w-6 h-6 text-[#F5A962]" />
+                  Permutas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">
+                  Gestionar intercambios y cambios de compañía
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Card Habitaciones */}
+            <Card
+              className="bg-white/90 backdrop-blur border-none shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              onClick={() => router.push("/habitaciones")}
+            >
+              <CardHeader>
+                <CardTitle className="text-[#2B5F7F] flex items-center gap-2">
+                  <Home className="w-6 h-6 text-[#F5A962]" />
+                  Habitaciones
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">
+                  Ver distribución y ocupación de habitaciones
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Card Alimentos */}
+            <Card
+              className="bg-white/90 backdrop-blur border-none shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              onClick={() => router.push("/alimentos")}
+            >
+              <CardHeader>
+                <CardTitle className="text-[#2B5F7F] flex items-center gap-2">
+                  <UtensilsCrossed className="w-6 h-6 text-[#F5A962]" />
+                  Alimentos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">
+                  Gestión de dietas y restricciones alimentarias
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Card de Cumpleañeros */}
         <Card className="bg-white/90 backdrop-blur border-none shadow-lg">
           <CardHeader>
@@ -252,7 +331,7 @@ export default function DireccionPage() {
                             {persona.nombres}
                           </p>
                           <p className="text-sm text-gray-600">
-                            Compañía {persona.compañia === 1 ? "Staff" : persona.compañia - 1}
+                            {persona.compañia === 1 ? "Sin Compañía" : persona.compañia === 2 ? "Staff" : `Compañía ${persona.compañia - 2}`}
                           </p>
                         </div>
                         <Badge className="bg-[#F5A962] hover:bg-[#F5A962]/80 text-white">

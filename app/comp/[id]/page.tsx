@@ -89,9 +89,11 @@ export default function CompanyPage() {
         );
 
         if (members.length === 0) {
+          // Calculate display number: id_comp - 2 (e.g., id_comp=3 → C1)
+          const displayNumber = companyIdFromUrl - 2;
           setCompany({
-            id: companyIdFromUrl,
-            name: `Compañía ${companyIdFromUrl}`,
+            id: displayNumber,
+            name: `Compañía ${displayNumber}`,
             maleCount: 0,
             maleTotal: 0,
             femaleCount: 0,
@@ -118,8 +120,8 @@ export default function CompanyPage() {
           },
         });
 
-        const companyComp = members[0].comp;
-        const companyId = parseInt(companyComp.replace("C", ""), 10);
+        // Calculate display number: id_comp - 2 (e.g., id_comp=3 → C1)
+        const displayNumber = companyIdFromUrl - 2;
 
         const maleMembers = participants.filter((m) => m.sexo === "H");
         const femaleMembers = participants.filter((m) => m.sexo === "M");
@@ -130,8 +132,8 @@ export default function CompanyPage() {
         ).length;
 
         setCompany({
-          id: companyId,
-          name: `Compañía ${companyId}`,
+          id: displayNumber,
+          name: `Compañía ${displayNumber}`,
           maleCount,
           maleTotal: maleMembers.length,
           femaleCount,

@@ -97,7 +97,9 @@ export const ResultadosParticipante: React.FC<ResultadosParticipanteProps> = ({
               <Badge
                 className={cn(
                   "font-semibold",
-                  participanteInfo.compania === "Staff"
+                  participanteInfo.compania === "SC"
+                    ? "bg-green-500 hover:bg-green-600 text-white"
+                    : participanteInfo.compania === "Staff"
                     ? "bg-[#FFB81C] hover:bg-[#FFB81C]/90 text-[#006184]"
                     : "bg-blue-500 hover:bg-blue-600"
                 )}

@@ -62,7 +62,7 @@ const transformStatsToCompanies = (
       const id = parseInt(companyId);
       return {
         id,
-        name: id === 1 ? "Staff" : `Compañía ${id - 1}`,
+        name: id === 1 ? "Sin Compañía" : id === 2 ? "Staff" : `Compañía ${id - 2}`,
         participants: participants.map((p, index) => ({
           id: index + 1,
           name: p.nombres,

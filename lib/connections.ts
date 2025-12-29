@@ -13,6 +13,7 @@ interface ParticipanteStats {
   asistio: "Si" | "No";
   dieta?: "Si" | "No";
   obs_dieta?: string;
+  nacimiento?: string;
 }
 
 // Función para obtener la lista de participantes

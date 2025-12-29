@@ -67,7 +67,7 @@ export default function CompanyPage() {
 
   // Sample company data
   const company: Company = {
-    id: 1,
+    id: 3,
     name: "Compañía 1",
     maleCount: 2,
     maleTotal: 12,

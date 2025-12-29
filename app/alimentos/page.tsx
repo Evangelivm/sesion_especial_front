@@ -179,7 +179,7 @@ export default function AlimentosPage() {
 
       if (dietasCompania.length > 0) {
         totalDietas += dietasCompania.length;
-        const nombreCompania = comp.numero === 1 ? "Staff" : `Compañía ${comp.numero - 1}`;
+        const nombreCompania = comp.numero === 1 ? "Sin Compañía" : comp.numero === 2 ? "Staff" : `Compañía ${comp.numero - 2}`;
         informe += `*${nombreCompania} - ${dietasCompania.length} ${dietasCompania.length === 1 ? "dieta" : "dietas"}*\n`;
         informe += "-".repeat(50) + "\n";
 
@@ -387,7 +387,7 @@ export default function AlimentosPage() {
                             <div className="flex items-center justify-between w-full pr-4">
                               <div className="flex items-center gap-3 flex-1">
                                 <Badge className="bg-[#01667C] hover:bg-[#01667C]/90">
-                                  {comp.numero === 1 ? "Staff" : `C${comp.numero - 1}`}
+                                  {comp.numero === 1 ? "SC" : comp.numero === 2 ? "Staff" : `C${comp.numero - 2}`}
                                 </Badge>
                                 <div className="text-sm flex items-center gap-3">
                                   <div className="flex items-center gap-2">
