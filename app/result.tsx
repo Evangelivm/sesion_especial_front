@@ -130,7 +130,7 @@ export const ResultadosParticipante: React.FC<ResultadosParticipanteProps> = ({
           </div>
 
           <Button
-            className="w-full mt-4 bg-[#2B5F7F] hover:bg-[#2B5F7F]/80 text-white font-semibold shadow-md disabled:opacity-50"
+            className="w-full mt-4 bg-[#2B5F7F] hover:bg-[#2B5F7F]/80 text-white font-semibold shadow-md disabled:opacity-50 h-auto py-3"
             onClick={handleConfirmarAsistencia}
             disabled={
               participanteInfo.asistio === "Si" ||
@@ -138,13 +138,18 @@ export const ResultadosParticipante: React.FC<ResultadosParticipanteProps> = ({
               participanteInfo.compania === "SC"
             }
           >
-            {participanteInfo.compania === "SC"
-              ? "Participante sin Compañía, dirigirlo a la mesa de soluciones"
-              : participanteInfo.asistio === "Si"
-              ? "Asistencia Confirmada"
-              : isButtonDisabled
-              ? `Espere ${countdown} segundo${countdown !== 1 ? 's' : ''}...`
-              : "Confirmar Asistencia"}
+            {participanteInfo.compania === "SC" ? (
+              <div className="flex flex-col">
+                <span>Participante sin Compañía,</span>
+                <span>dirigirlo a la mesa de soluciones</span>
+              </div>
+            ) : participanteInfo.asistio === "Si" ? (
+              "Asistencia Confirmada"
+            ) : isButtonDisabled ? (
+              `Espere ${countdown} segundo${countdown !== 1 ? 's' : ''}...`
+            ) : (
+              "Confirmar Asistencia"
+            )}
           </Button>
         </div>
       </CardContent>
