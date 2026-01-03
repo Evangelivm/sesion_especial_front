@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = process.env.NEXT_PUBLIC_HTTP_URL || "http://localhost:3000";
+const BASE_URL = process.env.NEXT_PUBLIC_HTTP_URL || "http://localhost:3001";
 
 interface ParticipanteStats {
   id: number;
