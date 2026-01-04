@@ -367,6 +367,25 @@ export const getCompanias = async () => {
   }
 };
 
+// Función para realizar cambio compuesto (compañía y habitación)
+export const cambioCompuesto = async (
+  personaId: number,
+  nuevaCompaniaId: number,
+  nuevaHabitacionId: number
+) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/permuta/cambio-compuesto`, {
+      persona_id: personaId,
+      nueva_compania_id: nuevaCompaniaId,
+      nueva_habitacion_id: nuevaHabitacionId,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al realizar cambio compuesto:", error);
+    throw error;
+  }
+};
+
 // Función para actualizar información médica de un participante
 export const actualizarInformacionMedica = async (
   id: number,

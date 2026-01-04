@@ -6,7 +6,6 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import {
-  ChevronLeft,
   Search,
   Filter,
   Calendar,
@@ -265,7 +264,6 @@ export default function HistorialAtencionesPage() {
     { id: "registration", label: "Inscripción", icon: "ClipboardList" },
     { id: "attendance", label: "Asistencia", icon: "CalendarCheck" },
     { id: "statistics", label: "Stats", icon: "BarChart2" },
-    { id: "inventory", label: "Inventario", icon: "Package" },
   ];
   return (
     <main
@@ -273,21 +271,27 @@ export default function HistorialAtencionesPage() {
       onContextMenu={!isMobile ? handleRightClick : undefined}
     >
       {/* Header */}
-      <div className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 flex items-center">
-        <button onClick={() => router.push("/")} className="text-white mr-2">
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-xl font-bold text-white mr-auto">
-          Historial de Atenciones
-        </h1>
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={nuevaAtencion}>
+      <div className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4">
+        <div className="flex items-center">
+          <h1 className="text-lg sm:text-xl font-bold text-white">
+            Historial de Atenciones
+          </h1>
+        </div>
+        {/* Botones responsivos */}
+        <div className="flex flex-wrap gap-2 mt-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={nuevaAtencion}
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
+          >
             Nueva Atención
           </Button>
           <Button
             variant="secondary"
             size="sm"
             onClick={() => router.push("/inventario-medicamentos")}
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
           >
             Inventario
           </Button>
@@ -295,8 +299,10 @@ export default function HistorialAtencionesPage() {
             variant="secondary"
             size="sm"
             onClick={() => setModalDietasAbierto(true)}
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
           >
-            Dietas y Alergias
+            <span className="hidden sm:inline">Dietas y Alergias</span>
+            <span className="sm:hidden">Dietas</span>
           </Button>
         </div>
       </div>
@@ -518,20 +524,22 @@ export default function HistorialAtencionesPage() {
       </div>
       {/* Panel flotante de detalles de atención */}
       <Dialog open={mostrarDetalles} onOpenChange={setMostrarDetalles}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalles de Atención Médica</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">
+              Detalles de Atención Médica
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Información completa de la atención registrada.
             </DialogDescription>
           </DialogHeader>
           {atencionSeleccionada && (
-            <div className="space-y-4 py-4 text-sm">
-              <div className="flex items-center gap-2">
-                <strong>Participante:</strong>{" "}
+            <div className="space-y-3 py-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <strong className="text-xs sm:text-sm">Participante:</strong>
                 <Button
                   variant="link"
-                  className="p-0 h-auto font-normal text-left"
+                  className="p-0 h-auto font-normal text-left text-xs sm:text-sm"
                   onClick={() => irARegistro(atencionSeleccionada.datos.id)}
                 >
                   {atencionSeleccionada.datos.nombre_completo}
@@ -542,38 +550,40 @@ export default function HistorialAtencionesPage() {
                   </Badge>
                 )}
               </div>
-              <p>
-                <strong>Fecha de Consulta:</strong>{" "}
-                {formatearFecha(atencionSeleccionada.fecha_consulta)} a las{" "}
-                {formatearHora(atencionSeleccionada.fecha_consulta)}
-              </p>
-              <p>
-                <strong>Motivo de Consulta:</strong>{" "}
-                {atencionSeleccionada.motivo_consulta}
-              </p>
-              <p>
-                <strong>Tratamiento:</strong> {atencionSeleccionada.tratamiento}
-              </p>
-              <p>
-                <strong>Seguimiento:</strong>{" "}
-                {atencionSeleccionada.seguimiento === 1 ? `Sí` : "No"}
-              </p>
-              {/* Mostrar fecha de seguimiento en el dialog si existe */}
-              {atencionSeleccionada.seguimiento === 1 &&
-                atencionSeleccionada.fecha_seguimiento && (
-                  <p>
-                    <strong>Fecha de Seguimiento:</strong>{" "}
-                    {formatearFecha(atencionSeleccionada.fecha_seguimiento)} a
-                    las {formatearHora(atencionSeleccionada.fecha_seguimiento)}
-                  </p>
-                )}
+              <div className="space-y-2">
+                <p className="text-xs sm:text-sm">
+                  <strong>Fecha de Consulta:</strong>{" "}
+                  {formatearFecha(atencionSeleccionada.fecha_consulta)} a las{" "}
+                  {formatearHora(atencionSeleccionada.fecha_consulta)}
+                </p>
+                <p className="text-xs sm:text-sm">
+                  <strong>Motivo de Consulta:</strong>{" "}
+                  {atencionSeleccionada.motivo_consulta}
+                </p>
+                <p className="text-xs sm:text-sm">
+                  <strong>Tratamiento:</strong> {atencionSeleccionada.tratamiento}
+                </p>
+                <p className="text-xs sm:text-sm">
+                  <strong>Seguimiento:</strong>{" "}
+                  {atencionSeleccionada.seguimiento === 1 ? `Sí` : "No"}
+                </p>
+                {/* Mostrar fecha de seguimiento en el dialog si existe */}
+                {atencionSeleccionada.seguimiento === 1 &&
+                  atencionSeleccionada.fecha_seguimiento && (
+                    <p className="text-xs sm:text-sm">
+                      <strong>Fecha de Seguimiento:</strong>{" "}
+                      {formatearFecha(atencionSeleccionada.fecha_seguimiento)} a
+                      las {formatearHora(atencionSeleccionada.fecha_seguimiento)}
+                    </p>
+                  )}
+              </div>
               {atencionSeleccionada.medicinas_recetadas.length > 0 && (
-                <div>
-                  <p className="font-medium mt-2">Medicamentos Recetados:</p>
-                  <ul className="list-disc pl-5 space-y-1">
+                <div className="pt-2 border-t">
+                  <p className="font-medium text-xs sm:text-sm mb-2">Medicamentos Recetados:</p>
+                  <ul className="list-disc pl-5 space-y-1.5">
                     {atencionSeleccionada.medicinas_recetadas.map(
                       (med, index) => (
-                        <li key={index}>
+                        <li key={index} className="text-xs sm:text-sm">
                           {med.inventario_salud.nombre}
                           {med.inventario_salud.dosis &&
                             ` - ${med.inventario_salud.dosis}`}
@@ -598,16 +608,18 @@ export default function HistorialAtencionesPage() {
               )}
             </div>
           )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => setModalMedicoAbierto(true)}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
-              Actualizar Información Médica
+              <span className="hidden sm:inline">Actualizar Información Médica</span>
+              <span className="sm:hidden">Actualizar Info</span>
             </Button>
             <DialogClose asChild>
-              <Button type="button" variant="secondary">
+              <Button type="button" variant="secondary" className="w-full sm:w-auto text-xs sm:text-sm">
                 Cerrar
               </Button>
             </DialogClose>

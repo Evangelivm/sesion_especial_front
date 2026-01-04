@@ -646,18 +646,21 @@ export default function RadialMenu({
     }
 
     // Handle individual company selection
-    // Extract id_comp from company.id (e.g., "c3" -> "3")
-    const companyId = company.id.replace('c', '');
+    // Extract id_comp from company.id (e.g., "c10" -> "10")
+    const idComp = company.id.replace('c', '');
+    // Convert to URL id by subtracting 1 (e.g., id_comp=10 -> URL id=9 for Compañía 8)
+    const urlId = Number(idComp) - 1;
     console.log("Compañía seleccionada:", {
       name: company.name,
       id: company.id,
-      companyId
+      idComp,
+      urlId
     });
 
     // Close menu and navigate to company page
     closeMenu();
     setTimeout(() => {
-      router.push(`/comp/${companyId}`);
+      router.push(`/comp/${urlId}`);
     }, 300);
   };
 
@@ -685,6 +688,7 @@ export default function RadialMenu({
         statistics: '/stats',
         registration: '/register',
         attendance: '/',
+        health: '/historial-atenciones',
       };
 
       // Crear una nueva timeline para la animación de selección

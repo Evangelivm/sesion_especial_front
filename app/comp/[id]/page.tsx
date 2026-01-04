@@ -83,17 +83,20 @@ export default function CompanyPage() {
       const companyIdFromUrl = Number(params.id);
       if (isNaN(companyIdFromUrl)) return;
 
+      // Check if this is the Staff page (id = 1)
+      const isStaffPage = companyIdFromUrl === 1;
+
       try {
         const members: CompanyMember[] = await getCompanyMembers(
           companyIdFromUrl
         );
 
         if (members.length === 0) {
-          // Calculate display number: id_comp - 2 (e.g., id_comp=3 → C1)
-          const displayNumber = companyIdFromUrl - 2;
+          // Calculate display number: id_comp - 1 (e.g., id_comp=9 → C8)
+          const displayNumber = companyIdFromUrl - 1;
           setCompany({
             id: displayNumber,
-            name: `Compañía ${displayNumber}`,
+            name: isStaffPage ? "Staff" : `Compañía ${displayNumber}`,
             maleCount: 0,
             maleTotal: 0,
             femaleCount: 0,
@@ -103,28 +106,32 @@ export default function CompanyPage() {
           return;
         }
 
-        const staff = members.filter((m) => m.tipo === "Staff");
-        const participants = members.filter((m) => m.tipo === "Participante");
+        // For Staff page, all members are Staff type; for companies, filter participants
+        const membersToShow = isStaffPage ? members : members.filter((m) => m.tipo === "Participante");
+        const staffMembers = members.filter((m) => m.tipo === "Staff");
 
-        const maleCounselor = staff.find((s) => s.sexo === "H");
-        const femaleCounselor = staff.find((s) => s.sexo === "M");
+        // Only set counselors for non-Staff pages
+        if (!isStaffPage) {
+          const maleCounselor = staffMembers.find((s) => s.sexo === "H");
+          const femaleCounselor = staffMembers.find((s) => s.sexo === "M");
 
-        setCounselors({
-          male: {
-            id: maleCounselor?.id || null,
-            name: maleCounselor?.nombres || "No asignado",
-          },
-          female: {
-            id: femaleCounselor?.id || null,
-            name: femaleCounselor?.nombres || "No asignada",
-          },
-        });
+          setCounselors({
+            male: {
+              id: maleCounselor?.id || null,
+              name: maleCounselor?.nombres || "No asignado",
+            },
+            female: {
+              id: femaleCounselor?.id || null,
+              name: femaleCounselor?.nombres || "No asignada",
+            },
+          });
+        }
 
-        // Calculate display number: id_comp - 2 (e.g., id_comp=3 → C1)
-        const displayNumber = companyIdFromUrl - 2;
+        // Calculate display number: id_comp - 1 (e.g., id_comp=9 → C8)
+        const displayNumber = companyIdFromUrl - 1;
 
-        const maleMembers = participants.filter((m) => m.sexo === "H");
-        const femaleMembers = participants.filter((m) => m.sexo === "M");
+        const maleMembers = membersToShow.filter((m) => m.sexo === "H");
+        const femaleMembers = membersToShow.filter((m) => m.sexo === "M");
 
         const maleCount = maleMembers.filter((m) => m.asistio === "Si").length;
         const femaleCount = femaleMembers.filter(
@@ -133,12 +140,12 @@ export default function CompanyPage() {
 
         setCompany({
           id: displayNumber,
-          name: `Compañía ${displayNumber}`,
+          name: isStaffPage ? "Staff" : `Compañía ${displayNumber}`,
           maleCount,
           maleTotal: maleMembers.length,
           femaleCount,
           femaleTotal: femaleMembers.length,
-          members: participants,
+          members: membersToShow,
         });
       } catch (error) {
         console.error("Failed to fetch company members:", error);
@@ -384,64 +391,72 @@ export default function CompanyPage() {
         {/* Counselors */}
         <div className="mb-4 text-center">
           <div className="text-sm text-slate-600">
-            <span className="font-semibold">Consejeros Asignados:</span>
-            <br />
-            {isMobile ? (
-              <div className="flex flex-col items-center">
-                {counselors.female.id ? (
-                  <b>
-                    <Link
-                      href={`/registro/${counselors.female.id}`}
-                      className="text-pink-600 hover:underline"
-                    >
-                      {counselors.female.name}
-                    </Link>
-                  </b>
-                ) : (
-                  <span>{counselors.female.name}</span>
-                )}
-                <span>-</span>
-                {counselors.male.id ? (
-                  <b>
-                    <Link
-                      href={`/registro/${counselors.male.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {counselors.male.name}
-                    </Link>
-                  </b>
-                ) : (
-                  <span>{counselors.male.name}</span>
-                )}
-              </div>
-            ) : (
+            {Number(params.id) === 1 ? (
               <p>
-                {counselors.female.id ? (
-                  <b>
-                    <Link
-                      href={`/registro/${counselors.female.id}`}
-                      className="text-pink-600 hover:underline"
-                    >
-                      {counselors.female.name}
-                    </Link>
-                  </b>
-                ) : (
-                  <span>{counselors.female.name}</span>
-                )}
-                <span className="mx-2">-</span>
-                {counselors.male.id ? (
-                  <b>
-                    <Link
-                      href={`/registro/${counselors.male.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {counselors.male.name}
-                    </Link>
-                  </b>
-                ) : (
-                  <span>{counselors.male.name}</span>
-                )}
+                <span className="font-semibold">Dirigido por el Matrimonio Logístico de Sesión</span>
               </p>
+            ) : (
+              <>
+                <span className="font-semibold">Consejeros Asignados:</span>
+                <br />
+                {isMobile ? (
+                  <div className="flex flex-col items-center">
+                    {counselors.female.id ? (
+                      <b>
+                        <Link
+                          href={`/registro/${counselors.female.id}`}
+                          className="text-pink-600 hover:underline"
+                        >
+                          {counselors.female.name}
+                        </Link>
+                      </b>
+                    ) : (
+                      <span>{counselors.female.name}</span>
+                    )}
+                    <span>-</span>
+                    {counselors.male.id ? (
+                      <b>
+                        <Link
+                          href={`/registro/${counselors.male.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {counselors.male.name}
+                        </Link>
+                      </b>
+                    ) : (
+                      <span>{counselors.male.name}</span>
+                    )}
+                  </div>
+                ) : (
+                  <p>
+                    {counselors.female.id ? (
+                      <b>
+                        <Link
+                          href={`/registro/${counselors.female.id}`}
+                          className="text-pink-600 hover:underline"
+                        >
+                          {counselors.female.name}
+                        </Link>
+                      </b>
+                    ) : (
+                      <span>{counselors.female.name}</span>
+                    )}
+                    <span className="mx-2">-</span>
+                    {counselors.male.id ? (
+                      <b>
+                        <Link
+                          href={`/registro/${counselors.male.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {counselors.male.name}
+                        </Link>
+                      </b>
+                    ) : (
+                      <span>{counselors.male.name}</span>
+                    )}
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>

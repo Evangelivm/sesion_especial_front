@@ -74,10 +74,10 @@ export default function ModalDietasAlergias({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Dietas y Alergias</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Dietas y Alergias</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Gestiona la información de dietas y alergias de todos los
               participantes y staff
             </DialogDescription>
@@ -95,9 +95,9 @@ export default function ModalDietasAlergias({
           </div>
 
           {/* Lista de participantes */}
-          <div className="overflow-y-auto max-h-[50vh] space-y-2">
+          <div className="overflow-y-auto flex-1 space-y-2">
             {loading ? (
-              <p className="text-center text-slate-500 py-8">Cargando...</p>
+              <p className="text-center text-slate-500 py-8 text-xs sm:text-sm">Cargando...</p>
             ) : participantesFiltrados.length > 0 ? (
               participantesFiltrados.map((participante) => (
                 <Card
@@ -105,12 +105,12 @@ export default function ModalDietasAlergias({
                   className="cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => handleEditarParticipante(participante)}
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-slate-500" />
-                          <h3 className="font-medium">
+                          <User className="h-3 w-3 sm:h-4 sm:w-4 text-slate-500" />
+                          <h3 className="font-medium text-xs sm:text-sm">
                             {participante.apellido}, {participante.nombre}
                           </h3>
                           <Badge
@@ -125,25 +125,28 @@ export default function ModalDietasAlergias({
                           </Badge>
                         </div>
 
-                        <div className="flex flex-wrap gap-1 mt-2">
+                        <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2">
                           {participante.dieta === "Si" && (
-                            <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none text-xs">
+                            <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none text-[10px] sm:text-xs px-1.5 py-0.5">
                               Dieta
                             </Badge>
                           )}
                           {participante.alergia_alimento === "Si" && (
-                            <Badge className="bg-red-500 hover:bg-red-600 text-white border-none text-xs">
-                              Alergia Alimento
+                            <Badge className="bg-red-500 hover:bg-red-600 text-white border-none text-[10px] sm:text-xs px-1.5 py-0.5">
+                              <span className="hidden sm:inline">Alergia Alimento</span>
+                              <span className="sm:hidden">Alimento</span>
                             </Badge>
                           )}
                           {participante.alergia_medicamento === "Si" && (
-                            <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none text-xs">
-                              Alergia Medicamento
+                            <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none text-[10px] sm:text-xs px-1.5 py-0.5">
+                              <span className="hidden sm:inline">Alergia Medicamento</span>
+                              <span className="sm:hidden">Medicamento</span>
                             </Badge>
                           )}
                           {participante.alergia_polvo_pelos_acaro === "Si" && (
-                            <Badge className="bg-purple-500 hover:bg-purple-600 text-white border-none text-xs">
-                              Alergia Polvo/Pelos
+                            <Badge className="bg-purple-500 hover:bg-purple-600 text-white border-none text-[10px] sm:text-xs px-1.5 py-0.5">
+                              <span className="hidden sm:inline">Alergia Polvo/Pelos</span>
+                              <span className="sm:hidden">Polvo</span>
                             </Badge>
                           )}
                           {participante.dieta !== "Si" &&
@@ -152,7 +155,7 @@ export default function ModalDietasAlergias({
                             participante.alergia_polvo_pelos_acaro !== "Si" && (
                               <Badge
                                 variant="outline"
-                                className="text-xs text-slate-500"
+                                className="text-[10px] sm:text-xs text-slate-500 px-1.5 py-0.5"
                               >
                                 Sin restricciones
                               </Badge>
@@ -164,13 +167,13 @@ export default function ModalDietasAlergias({
                 </Card>
               ))
             ) : (
-              <p className="text-center text-slate-500 py-8">
+              <p className="text-center text-slate-500 py-8 text-xs sm:text-sm">
                 No se encontraron participantes
               </p>
             )}
           </div>
 
-          <div className="text-sm text-slate-500 text-center">
+          <div className="text-xs sm:text-sm text-slate-500 text-center pt-2 border-t">
             {participantesFiltrados.length} participante(s)
           </div>
         </DialogContent>

@@ -401,11 +401,11 @@ export default function ProfilePage() {
                 className="text-lg font-semibold p-0 h-auto"
                 onClick={() => {
                   if (participanteData?.compania) {
-                    const companyId = participanteData.compania.replace(
-                      "C",
-                      ""
-                    );
-                    router.push(`/comp/${companyId}`);
+                    // Extract company number (e.g., "C8" -> 8)
+                    const companyNumber = participanteData.compania.replace("C", "");
+                    // Convert to URL id by adding 1 (e.g., C8 -> URL id=9 for Compañía 8)
+                    const urlId = Number(companyNumber) + 1;
+                    router.push(`/comp/${urlId}`);
                   }
                 }}
               >

@@ -40,8 +40,11 @@ import {
   intercambiarParticipantes,
   cambiarCompania as cambiarCompaniaAPI,
   getCompanias,
+  cambioCompuesto as cambioCompuestoAPI,
+  buscarParticipanteCompleto,
 } from "@/lib/connections";
 import { toast } from "sonner";
+import { socket } from "@/lib/socket";
 
 interface Participante {
   id: number;
@@ -55,9 +58,52 @@ interface Compania {
 }
 
 
+interface CompanyData {
+  id_comp: number;
+  comp: string;
+  hombres: string;
+  mujeres: string;
+}
+
+interface RoomData {
+  id_habitacion: number;
+  habitacion: string;
+  camas: string;
+  registrados: number;
+  ocupados: number;
+  libres: number;
+}
+
+// Helper function to format company display name
+const formatCompanyName = (companyString: string | undefined): string => {
+  if (!companyString) return "Sin asignar";
+
+  // Si es "C-1" → "SC"
+  if (companyString === "C-1") return "SC";
+
+  // Si es "C0" → "Staff"
+  if (companyString === "C0") return "Staff";
+
+  // Si es "C1", "C2", etc. → "Compañía 1", "Compañía 2", etc.
+  const match = companyString.match(/^C(\d+)$/);
+  if (match) {
+    return `Compañía ${match[1]}`;
+  }
+
+  // Si no coincide con ningún patrón, devolver tal cual
+  return companyString;
+};
+
+// Helper function to format company name by ID
+const formatCompanyNameById = (companyId: number): string => {
+  if (companyId === 1) return "SC";
+  if (companyId === 2) return "Staff";
+  return `Compañía ${companyId - 2}`;
+};
+
 export default function PermutaPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"intercambio" | "cambio">("intercambio");
+  const [mode, setMode] = useState<"intercambio" | "cambio" | "cambio-compuesto">("intercambio");
   const [participantes, setParticipantes] = useState<Participante[]>([]);
   const [companias, setCompanias] = useState<Compania[]>([]);
 
@@ -68,6 +114,17 @@ export default function PermutaPage() {
   // Estados para Cambio Simple
   const [personaCambio, setPersonaCambio] = useState<Participante | null>(null);
   const [nuevaCompaniaId, setNuevaCompaniaId] = useState<number | null>(null);
+
+  // Estados para Cambio Compuesto
+  const [personaCompuesto, setPersonaCompuesto] = useState<Participante | null>(null);
+  const [personaCompuestoFull, setPersonaCompuestoFull] = useState<any | null>(null);
+  const [companiasCompatibles, setCompaniasCompatibles] = useState<CompanyData[]>([]);
+  const [habitacionesCompatibles, setHabitacionesCompatibles] = useState<RoomData[]>([]);
+  const [companiaSeleccionada, setCompaniaSeleccionada] = useState<number | null>(null);
+  const [habitacionSeleccionada, setHabitacionSeleccionada] = useState<number | null>(null);
+  const [mostrarBusquedaCompuesto, setMostrarBusquedaCompuesto] = useState(false);
+  const [busquedaCompuesto, setBusquedaCompuesto] = useState("");
+  const [visibleCountCompuesto, setVisibleCountCompuesto] = useState(20);
 
   // Estados para búsqueda
   const [mostrarBusquedaPersona1, setMostrarBusquedaPersona1] = useState(false);
@@ -107,12 +164,81 @@ export default function PermutaPage() {
         setMostrarBusquedaPersona1(false);
         setMostrarBusquedaPersona2(false);
         setMostrarBusquedaCambio(false);
+        setMostrarBusquedaCompuesto(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Pub/Sub para cambio compuesto
+  useEffect(() => {
+    if (!personaCompuestoFull || mode !== "cambio-compuesto") return;
+
+    const edad = personaCompuestoFull.edad;
+    const genero = personaCompuestoFull.sexo;
+
+    const companyChannel = `summary-age-${edad}`;
+    const roomChannel = `rooms-age-${edad}-${genero}`;
+
+    // Suscribirse a compañías compatibles
+    socket.emit("subscribeToChannel", companyChannel);
+    socket.on(companyChannel, (message: any) => {
+      try {
+        const parsedMessage = typeof message === "string" ? JSON.parse(message) : message;
+        const newMessages = Array.isArray(parsedMessage) ? parsedMessage : [parsedMessage];
+        const validMessages = newMessages.filter(
+          (msg) =>
+            msg &&
+            typeof msg === "object" &&
+            typeof msg.id_comp === "number" &&
+            typeof msg.hombres === "string" &&
+            typeof msg.mujeres === "string"
+        );
+        if (validMessages.length > 0) {
+          setCompaniasCompatibles([...validMessages]);
+        } else {
+          setCompaniasCompatibles([]);
+        }
+      } catch (error) {
+        console.error("Error al parsear mensaje de compañías:", error);
+      }
+    });
+
+    // Suscribirse a habitaciones compatibles
+    socket.emit("subscribeToChannel", roomChannel);
+    socket.on(roomChannel, (message: any) => {
+      try {
+        const parsedMessage = typeof message === "string" ? JSON.parse(message) : message;
+        const newMessages = Array.isArray(parsedMessage) ? parsedMessage : [parsedMessage];
+        const validMessages = newMessages.filter(
+          (msg) =>
+            msg &&
+            typeof msg === "object" &&
+            typeof msg.id_habitacion === "number" &&
+            typeof msg.habitacion === "string" &&
+            typeof msg.camas === "string" &&
+            typeof msg.registrados === "number" &&
+            typeof msg.ocupados === "number" &&
+            typeof msg.libres === "number"
+        );
+        if (validMessages.length > 0) {
+          setHabitacionesCompatibles([...validMessages]);
+        } else {
+          setHabitacionesCompatibles([]);
+        }
+      } catch (error) {
+        console.error("Error al parsear mensaje de habitaciones:", error);
+      }
+    });
+
+    // Cleanup
+    return () => {
+      socket.off(companyChannel);
+      socket.off(roomChannel);
+    };
+  }, [personaCompuestoFull, mode]);
 
   const handleIntercambio = () => {
     if (!persona1 || !persona2) {
@@ -148,6 +274,25 @@ export default function PermutaPage() {
     setShowConfirmacion(true);
   };
 
+  const handleCambioCompuesto = () => {
+    if (!personaCompuesto) {
+      toast.error("Debes seleccionar una persona");
+      return;
+    }
+
+    if (!companiaSeleccionada) {
+      toast.error("Debes seleccionar la nueva compañía");
+      return;
+    }
+
+    if (!habitacionSeleccionada) {
+      toast.error("Debes seleccionar la nueva habitación");
+      return;
+    }
+
+    setShowConfirmacion(true);
+  };
+
   const confirmarAccion = async () => {
     try {
       if (mode === "intercambio") {
@@ -169,7 +314,7 @@ export default function PermutaPage() {
         // Recargar la lista de participantes
         const data = await getParticipantes();
         setParticipantes(data);
-      } else {
+      } else if (mode === "cambio") {
         if (!personaCambio || !nuevaCompaniaId) return;
 
         // Llamar al endpoint de cambio
@@ -184,6 +329,30 @@ export default function PermutaPage() {
         // Reset y recargar participantes
         setPersonaCambio(null);
         setNuevaCompaniaId(null);
+
+        // Recargar la lista de participantes
+        const data = await getParticipantes();
+        setParticipantes(data);
+      } else if (mode === "cambio-compuesto") {
+        if (!personaCompuesto || !companiaSeleccionada || !habitacionSeleccionada) return;
+
+        // Llamar al endpoint de cambio compuesto
+        const resultado = await cambioCompuestoAPI(
+          personaCompuesto.id,
+          companiaSeleccionada,
+          habitacionSeleccionada
+        );
+
+        toast.success(resultado.mensaje || "Cambio compuesto realizado exitosamente");
+        console.log("Resultado del cambio compuesto:", resultado);
+
+        // Reset y recargar participantes
+        setPersonaCompuesto(null);
+        setPersonaCompuestoFull(null);
+        setCompaniaSeleccionada(null);
+        setHabitacionSeleccionada(null);
+        setCompaniasCompatibles([]);
+        setHabitacionesCompatibles([]);
 
         // Recargar la lista de participantes
         const data = await getParticipantes();
@@ -212,6 +381,15 @@ export default function PermutaPage() {
     setNuevaCompaniaId(null);
   };
 
+  const resetCambioCompuesto = () => {
+    setPersonaCompuesto(null);
+    setPersonaCompuestoFull(null);
+    setCompaniaSeleccionada(null);
+    setHabitacionSeleccionada(null);
+    setCompaniasCompatibles([]);
+    setHabitacionesCompatibles([]);
+  };
+
   // Funciones de filtrado
   const participantesFiltrados1 = participantes.filter((p) =>
     p.name.toLowerCase().includes(busquedaPersona1.toLowerCase())
@@ -223,6 +401,10 @@ export default function PermutaPage() {
 
   const participantesFiltradosCambio = participantes.filter((p) =>
     p.name.toLowerCase().includes(busquedaCambio.toLowerCase())
+  );
+
+  const participantesFiltradosCompuesto = participantes.filter((p) =>
+    p.name.toLowerCase().includes(busquedaCompuesto.toLowerCase())
   );
 
   // Funciones de selección
@@ -245,6 +427,22 @@ export default function PermutaPage() {
     setMostrarBusquedaCambio(false);
     setBusquedaCambio("");
     setVisibleCountCambio(20);
+  };
+
+  const seleccionarPersonaCompuesto = async (participante: Participante) => {
+    try {
+      setPersonaCompuesto(participante);
+      setMostrarBusquedaCompuesto(false);
+      setBusquedaCompuesto("");
+      setVisibleCountCompuesto(20);
+
+      // Obtener datos completos del participante
+      const datosCompletos = await buscarParticipanteCompleto(participante.id);
+      setPersonaCompuestoFull(datosCompletos);
+    } catch (error) {
+      console.error("Error al buscar datos completos del participante:", error);
+      toast.error("Error al obtener datos del participante");
+    }
   };
 
   return (
@@ -273,17 +471,24 @@ export default function PermutaPage() {
       <main className="container mx-auto p-4 max-w-4xl">
         <Tabs
           value={mode}
-          onValueChange={(v) => setMode(v as "intercambio" | "cambio")}
+          onValueChange={(v) => setMode(v as "intercambio" | "cambio" | "cambio-compuesto")}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="intercambio" className="flex items-center gap-2">
               <ArrowLeftRight className="h-4 w-4" />
-              Intercambio
+              <span className="hidden sm:inline">Intercambio</span>
+              <span className="sm:hidden">Inter.</span>
             </TabsTrigger>
             <TabsTrigger value="cambio" className="flex items-center gap-2">
               <MoveRight className="h-4 w-4" />
-              Cambio Simple
+              <span className="hidden sm:inline">Cambio Simple</span>
+              <span className="sm:hidden">Simple</span>
+            </TabsTrigger>
+            <TabsTrigger value="cambio-compuesto" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Cambio Compuesto</span>
+              <span className="sm:hidden">Comp.</span>
             </TabsTrigger>
           </TabsList>
 
@@ -725,21 +930,23 @@ export default function PermutaPage() {
                     Nueva Compañía
                   </label>
                   <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-2">
-                    {companias.map((compania) => (
-                      <Button
-                        key={compania.id_comp}
-                        variant={nuevaCompaniaId === compania.id_comp ? "default" : "outline"}
-                        className={`h-12 ${
-                          nuevaCompaniaId === compania.id_comp
-                            ? "bg-blue-600 hover:bg-blue-700"
-                            : ""
-                        }`}
-                        onClick={() => setNuevaCompaniaId(compania.id_comp)}
-                        title={compania.comp}
-                      >
-                        {compania.comp.replace('C', '')}
-                      </Button>
-                    ))}
+                    {companias
+                      .filter((compania) => compania.id_comp !== 1 && compania.id_comp !== 2)
+                      .map((compania) => (
+                        <Button
+                          key={compania.id_comp}
+                          variant={nuevaCompaniaId === compania.id_comp ? "default" : "outline"}
+                          className={`h-12 ${
+                            nuevaCompaniaId === compania.id_comp
+                              ? "bg-blue-600 hover:bg-blue-700"
+                              : ""
+                          }`}
+                          onClick={() => setNuevaCompaniaId(compania.id_comp)}
+                          title={`C${compania.id_comp - 2}`}
+                        >
+                          {compania.id_comp - 2}
+                        </Button>
+                      ))}
                   </div>
                 </div>
 
@@ -761,7 +968,7 @@ export default function PermutaPage() {
                         {personaCambio.name}
                       </Button>
                       <span className="text-slate-600">
-                        {personaCambio.compania} → {companias.find(c => c.id_comp === nuevaCompaniaId)?.comp}
+                        {personaCambio.compania} → {nuevaCompaniaId ? `C${nuevaCompaniaId - 2}` : ''}
                       </span>
                     </div>
                   </div>
@@ -790,6 +997,241 @@ export default function PermutaPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* MODO CAMBIO COMPUESTO */}
+          <TabsContent value="cambio-compuesto">
+            <Card className="bg-white/95 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  Cambio Compuesto
+                </CardTitle>
+                <CardDescription>
+                  Cambia compañía y habitación de un participante según compatibilidad
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Selección de Participante */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <User className="h-4 w-4 text-blue-600" />
+                    Participante
+                  </label>
+                  <div className="relative">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start h-auto py-3 text-left bg-white hover:bg-slate-50"
+                      onClick={() => setMostrarBusquedaCompuesto(!mostrarBusquedaCompuesto)}
+                    >
+                      {personaCompuesto ? (
+                        <div className="flex items-center justify-between w-full">
+                          <div>
+                            <div className="font-medium">{personaCompuesto.name}</div>
+                            <div className="text-xs text-slate-500">
+                              Compañía: {formatCompanyName(personaCompuesto.compania)}
+                            </div>
+                          </div>
+                          <Badge className="ml-2">{personaCompuesto.id}</Badge>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 flex items-center gap-2">
+                          <Search className="h-4 w-4" />
+                          Buscar participante...
+                        </span>
+                      )}
+                    </Button>
+
+                    {/* Panel de búsqueda */}
+                    {mostrarBusquedaCompuesto && (
+                      <div
+                        data-search-panel
+                        className="absolute z-10 w-full mt-2 bg-white border rounded-lg shadow-lg"
+                      >
+                        <div className="p-3">
+                          <Input
+                            placeholder="Buscar por nombre..."
+                            value={busquedaCompuesto}
+                            onChange={(e) => setBusquedaCompuesto(e.target.value)}
+                            className="mb-2"
+                          />
+                          <div className="max-h-60 overflow-y-auto space-y-1">
+                            {participantesFiltradosCompuesto
+                              .slice(0, visibleCountCompuesto)
+                              .map((p) => (
+                                <button
+                                  key={p.id}
+                                  className="w-full text-left p-2 hover:bg-slate-100 rounded flex justify-between items-center"
+                                  onClick={() => seleccionarPersonaCompuesto(p)}
+                                >
+                                  <div>
+                                    <div className="font-medium">{p.name}</div>
+                                    <div className="text-xs text-slate-500">
+                                      {p.compania || "Sin asignar"}
+                                    </div>
+                                  </div>
+                                  <Badge variant="outline">{p.id}</Badge>
+                                </button>
+                              ))}
+                          </div>
+                          {participantesFiltradosCompuesto.length >
+                            visibleCountCompuesto && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full mt-2"
+                              onClick={() =>
+                                setVisibleCountCompuesto((prev) => prev + 20)
+                              }
+                            >
+                              Cargar más...
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Nueva Compañía */}
+                {personaCompuestoFull && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      Nueva Compañía (Compatibles: Edad {personaCompuestoFull.edad})
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {companiasCompatibles.length > 0 ? (
+                        companiasCompatibles
+                          .filter((comp) => comp.id_comp !== 1 && comp.id_comp !== 2)
+                          .map((comp) => (
+                            <Button
+                              key={comp.id_comp}
+                              variant={
+                                companiaSeleccionada === comp.id_comp
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="h-auto py-3"
+                              onClick={() => setCompaniaSeleccionada(comp.id_comp)}
+                            >
+                              <div className="flex flex-col items-center">
+                                <span className="font-medium">C{comp.id_comp - 2}</span>
+                                <span className="text-xs">
+                                  H: {comp.hombres} | M: {comp.mujeres}
+                                </span>
+                              </div>
+                            </Button>
+                          ))
+                      ) : (
+                        <div className="col-span-full text-center text-sm text-slate-500 py-4">
+                          Cargando compañías compatibles...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Nueva Habitación */}
+                {personaCompuestoFull && companiaSeleccionada && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      Nueva Habitación (Sexo: {personaCompuestoFull.sexo})
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {habitacionesCompatibles.length > 0 ? (
+                        habitacionesCompatibles.map((hab) => (
+                          <Button
+                            key={hab.id_habitacion}
+                            variant={
+                              habitacionSeleccionada === hab.id_habitacion
+                                ? "default"
+                                : "outline"
+                            }
+                            className="h-auto py-3"
+                            onClick={() => setHabitacionSeleccionada(hab.id_habitacion)}
+                            disabled={hab.libres === 0}
+                          >
+                            <div className="flex flex-col items-start w-full">
+                              <span className="font-medium">{hab.habitacion}</span>
+                              <span className="text-xs">
+                                Camas: {hab.camas} | Libres: {hab.libres}
+                              </span>
+                            </div>
+                          </Button>
+                        ))
+                      ) : (
+                        <div className="col-span-full text-center text-sm text-slate-500 py-4">
+                          Cargando habitaciones compatibles...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Vista Previa */}
+                {personaCompuesto && companiaSeleccionada && habitacionSeleccionada && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
+                    <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                      <Check className="h-5 w-5" />
+                      Vista Previa del Cambio
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium">{personaCompuesto.name}</span>
+                        <Badge>{personaCompuesto.id}</Badge>
+                      </div>
+                      <Separator />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <div className="text-xs text-slate-500">Compañía Actual</div>
+                          <div className="font-medium">{formatCompanyName(personaCompuesto.compania)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500">Nueva Compañía</div>
+                          <div className="font-medium text-green-600">
+                            {companiaSeleccionada ? formatCompanyNameById(companiaSeleccionada) : ''}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500">Habitación Actual</div>
+                          <div className="font-medium">{personaCompuestoFull?.habitacion || "Sin asignar"}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500">Nueva Habitación</div>
+                          <div className="font-medium text-green-600">
+                            {habitacionesCompatibles.find(h => h.id_habitacion === habitacionSeleccionada)?.habitacion}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Acciones */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={resetCambioCompuesto}
+                    disabled={!personaCompuesto}
+                  >
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Limpiar
+                  </Button>
+                  <Button
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    onClick={handleCambioCompuesto}
+                    disabled={!personaCompuesto || !companiaSeleccionada || !habitacionSeleccionada}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Realizar Cambio Compuesto
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -813,13 +1255,32 @@ export default function PermutaPage() {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : mode === "cambio" ? (
                 <div className="space-y-2">
                   <div>¿Estás seguro de realizar este cambio?</div>
                   <div className="bg-slate-50 p-3 rounded-lg text-sm">
                     <div>
                       <strong>{personaCambio?.name}</strong>:{" "}
-                      {personaCambio?.compania} → {companias.find(c => c.id_comp === nuevaCompaniaId)?.comp}
+                      {personaCambio?.compania} → {nuevaCompaniaId ? `C${nuevaCompaniaId - 2}` : ''}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div>¿Estás seguro de realizar este cambio compuesto?</div>
+                  <div className="bg-slate-50 p-3 rounded-lg text-sm space-y-2">
+                    <div>
+                      <strong>{personaCompuesto?.name}</strong>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <div className="text-slate-500">Compañía:</div>
+                        <div>{formatCompanyName(personaCompuesto?.compania)} → {companiaSeleccionada ? formatCompanyNameById(companiaSeleccionada) : ''}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-500">Habitación:</div>
+                        <div>{personaCompuestoFull?.habitacion} → {habitacionesCompatibles.find(h => h.id_habitacion === habitacionSeleccionada)?.habitacion}</div>
+                      </div>
                     </div>
                   </div>
                 </div>

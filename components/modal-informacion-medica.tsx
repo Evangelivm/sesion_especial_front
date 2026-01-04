@@ -96,18 +96,18 @@ export default function ModalInformacionMedica({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Actualizar Información Médica</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-base sm:text-lg">Actualizar Información Médica</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">
             Editar información de dietas y alergias para {participanteNombre}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
           {/* Dieta */}
           <div className="space-y-2">
-            <Label htmlFor="dieta">Dieta Especial</Label>
+            <Label htmlFor="dieta" className="text-xs sm:text-sm">Dieta Especial</Label>
             <Select value={dieta} onValueChange={(value) => setDieta(value as "Si" | "No")}>
               <SelectTrigger id="dieta">
                 <SelectValue />
@@ -122,7 +122,7 @@ export default function ModalInformacionMedica({
           {/* Observaciones de dieta (solo si dieta es "Si") */}
           {dieta === "Si" && (
             <div className="space-y-2">
-              <Label htmlFor="obs_dieta">Observaciones de Dieta</Label>
+              <Label htmlFor="obs_dieta" className="text-xs sm:text-sm">Observaciones de Dieta</Label>
               <Textarea
                 id="obs_dieta"
                 placeholder="Describe las restricciones o requerimientos especiales de dieta..."
@@ -135,7 +135,7 @@ export default function ModalInformacionMedica({
 
           {/* Alergia a alimentos */}
           <div className="space-y-2">
-            <Label htmlFor="alergia_alimento">Alergia a Alimentos</Label>
+            <Label htmlFor="alergia_alimento" className="text-xs sm:text-sm">Alergia a Alimentos</Label>
             <Select
               value={alergiaAlimento}
               onValueChange={(value) => setAlergiaAlimento(value as "Si" | "No")}
@@ -152,7 +152,7 @@ export default function ModalInformacionMedica({
 
           {/* Alergia a medicamentos */}
           <div className="space-y-2">
-            <Label htmlFor="alergia_medicamento">Alergia a Medicamentos</Label>
+            <Label htmlFor="alergia_medicamento" className="text-xs sm:text-sm">Alergia a Medicamentos</Label>
             <Select
               value={alergiaMedicamento}
               onValueChange={(value) => setAlergiaMedicamento(value as "Si" | "No")}
@@ -169,7 +169,7 @@ export default function ModalInformacionMedica({
 
           {/* Alergia a polvo/pelos/ácaros */}
           <div className="space-y-2">
-            <Label htmlFor="alergia_polvo">Alergia a Polvo/Pelos/Ácaros</Label>
+            <Label htmlFor="alergia_polvo" className="text-xs sm:text-sm">Alergia a Polvo/Pelos/Ácaros</Label>
             <Select
               value={alergiaPolvo}
               onValueChange={(value) => setAlergiaPolvo(value as "Si" | "No")}
@@ -185,11 +185,20 @@ export default function ModalInformacionMedica({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={guardando}>
+        <DialogFooter className="flex-col sm:flex-row gap-2 mt-4">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={guardando}
+            className="w-full sm:w-auto text-xs sm:text-sm"
+          >
             Cancelar
           </Button>
-          <Button onClick={handleGuardar} disabled={guardando}>
+          <Button
+            onClick={handleGuardar}
+            disabled={guardando}
+            className="w-full sm:w-auto text-xs sm:text-sm"
+          >
             {guardando ? "Guardando..." : "Guardar Cambios"}
           </Button>
         </DialogFooter>

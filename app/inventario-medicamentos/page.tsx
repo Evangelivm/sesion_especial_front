@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { Search, ArrowUpDown, Trash2, ChevronLeft, Pencil } from "lucide-react";
+import { Search, ArrowUpDown, Trash2, Pencil } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -320,9 +320,6 @@ export default function InventarioMedicamentos() {
       {/* Header */}
       <div className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 flex items-center justify-between">
         <div className="flex items-center overflow-hidden">
-          <button onClick={() => router.back()} className="text-white mr-2">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
           <h1 className="text-xl font-bold text-white truncate">
             Inventario de Medicamentos Tópicos
           </h1>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Building2, Users, UserRound, MapPin, Check, X } from "lucide-react";
+import { Building2, Users, UserRound, MapPin, Check, X, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import {
   Dialog,
@@ -13,6 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { socket } from "@/lib/socket";
+import RadialMenu from "@/components/radial-menu";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface Participant {
   id: number;
@@ -85,6 +87,10 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [updatedCompanyIds, setUpdatedCompanyIds] = useState<number[]>([]);
   const previousDataRef = useRef<Record<number, number>>({});
+  const [showMenu, setShowMenu] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const isMobile = useMobile();
 
   useEffect(() => {
     const channel = "participantes-ordenados";
@@ -204,30 +210,71 @@ function App() {
     { title: "Mujeres", value: femaleParticipants, icon: UserRound },
   ];
 
+  // Radial menu handlers
+  const handleRightClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setPosition({ x: e.clientX, y: e.clientY });
+    setShowMenu(true);
+  };
+
+  const handleOptionSelect = (option: string) => {
+    setSelectedOption(option);
+    setShowMenu(false);
+  };
+
+  const handleMobileMenuOpen = () => {
+    if (typeof window !== "undefined") {
+      setPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+    }
+    setShowMenu(true);
+  };
+
+  // Radial menu options
+  const menuOptions = [
+    { id: "companies", label: "Compañía", icon: "Users" },
+    { id: "person", label: "Persona", icon: "User" },
+    { id: "health", label: "Salud", icon: "FirstAid" },
+    { id: "registration", label: "Inscripción", icon: "ClipboardList" },
+    { id: "attendance", label: "Asistencia", icon: "CalendarCheck" },
+    { id: "statistics", label: "Stats", icon: "BarChart2" },
+  ];
+
   if (loading) {
-    return <div>Cargando...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#9ECC8D] via-[#B4DABD] to-[#CAE9EF] flex items-center justify-center">
+        <div className="text-[#015481] text-xl font-semibold">Cargando...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+    <div
+      className="min-h-screen bg-gradient-to-b from-[#9ECC8D] via-[#B4DABD] to-[#CAE9EF]"
+      onContextMenu={!isMobile ? handleRightClick : undefined}
+    >
+      <header className="p-4 bg-[#9ECC8D] shadow-lg">
+        <h1 className="text-2xl font-bold text-center text-[#015481]">
           Dashboard de Compañías
         </h1>
+      </header>
+      <div className="container mx-auto px-4 py-8">
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
-            <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+            <Card key={index} className="p-6 bg-white/15 backdrop-blur border-none hover:shadow-lg transition-shadow">
               <div className="flex items-center space-x-4">
-                <div className="p-3 bg-primary/10 rounded-full">
-                  <stat.icon className="w-6 h-6 text-primary" />
+                <div className="p-3 bg-[#F5A962]/20 rounded-full">
+                  <stat.icon className="w-6 h-6 text-[#015481]" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
+                  <p className="text-sm font-medium text-[#015481]/70">
                     {stat.title}
                   </p>
-                  <h3 className="text-2xl font-bold">{stat.value}</h3>
+                  <h3 className="text-2xl font-bold text-[#015481]">{stat.value}</h3>
                 </div>
               </div>
             </Card>
@@ -256,20 +303,20 @@ function App() {
               <Card
                 key={company.id}
                 className={cn(
-                  "p-6 cursor-pointer hover:shadow-lg transition-all",
-                  updatedCompanyIds.includes(company.id) ? "bg-green-200" : ""
+                  "p-6 cursor-pointer hover:shadow-lg transition-all bg-white/15 backdrop-blur border-none",
+                  updatedCompanyIds.includes(company.id) ? "ring-4 ring-[#F5A962] ring-opacity-70" : ""
                 )}
                 onClick={() => setSelectedCompany(company)}
               >
-                <h3 className="text-xl font-semibold mb-2">{company.name}</h3>
-                <div className="mt-4 flex items-center space-x-2">
-                  <Badge variant="secondary">
+                <h3 className="text-xl font-semibold mb-2 text-[#015481]">{company.name}</h3>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Badge className="bg-[#F5A962] text-[#015481] border-none font-semibold hover:bg-[#F5A962]/80">
                     Total: {totalPresent}/{totalParticipants}
                   </Badge>
-                  <Badge className="bg-blue-500 hover:bg-blue-600">
+                  <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-none">
                     Hombres: {presentMale}/{maleParticipants.length}
                   </Badge>
-                  <Badge className="bg-pink-500 hover:bg-pink-600">
+                  <Badge className="bg-pink-500 hover:bg-pink-600 text-white border-none">
                     Mujeres: {presentFemale}/{femaleParticipants.length}
                   </Badge>
                 </div>
@@ -283,15 +330,15 @@ function App() {
           open={!!selectedCompany}
           onOpenChange={() => setSelectedCompany(null)}
         >
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[600px] bg-white/95 backdrop-blur">
             <DialogHeader>
               <DialogTitle>
                 <div>
-                  <h2 className="text-xl font-semibold">
+                  <h2 className="text-xl font-semibold text-[#015481]">
                     {selectedCompany?.name}
                   </h2>
-                  <div className="mt-4 flex items-center space-x-2">
-                    <Badge variant="secondary">
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <Badge className="bg-[#F5A962] text-[#015481] border-none font-semibold hover:bg-[#F5A962]/80">
                       Total:{" "}
                       {
                         selectedCompany?.participants.filter((p) => p.present)
@@ -299,7 +346,7 @@ function App() {
                       }
                       /{selectedCompany?.participants.length}
                     </Badge>
-                    <Badge className="bg-blue-500 hover:bg-blue-600">
+                    <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-none">
                       Hombres:{" "}
                       {
                         selectedCompany?.participants.filter(
@@ -313,7 +360,7 @@ function App() {
                         ).length
                       }
                     </Badge>
-                    <Badge className="bg-pink-500 hover:bg-pink-600">
+                    <Badge className="bg-pink-500 hover:bg-pink-600 text-white border-none">
                       Mujeres:{" "}
                       {
                         selectedCompany?.participants.filter(
@@ -334,7 +381,7 @@ function App() {
             <ScrollArea className="max-h-[60vh]">
               <div className="space-y-4">
                 {selectedCompany?.participants.map((participant) => (
-                  <Card key={participant.id} className="p-4">
+                  <Card key={participant.id} className="p-4 bg-white/50 backdrop-blur border-[#015481]/20">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         {participant.gender === "H" ? (
@@ -344,15 +391,15 @@ function App() {
                         )}
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{participant.name}</p>
-                            <div className="flex items-center text-muted-foreground mb-1">
+                            <p className="font-medium text-[#015481]">{participant.name}</p>
+                            <div className="flex items-center text-[#015481]/60 mb-1">
                               <MapPin className="w-4 h-4 mr-1" />
                               <span className="text-sm">
                                 {participant.location}
                               </span>
                             </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-[#015481]/70">
                             Estaca {participant.stake}, {participant.ward}
                           </p>
                         </div>
@@ -361,7 +408,7 @@ function App() {
                         className={cn(
                           "flex items-center",
                           participant.present
-                            ? "text-green-500"
+                            ? "text-green-600"
                             : "text-gray-400"
                         )}
                       >
@@ -378,6 +425,28 @@ function App() {
             </ScrollArea>
           </DialogContent>
         </Dialog>
+
+        {/* Botón flotante para móviles (Radial Menu) */}
+        {isMobile && (
+          <button
+            onClick={handleMobileMenuOpen}
+            className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-slate-700 shadow-lg flex items-center justify-center z-20 hover:bg-slate-600 transition-colors"
+            aria-label="Abrir menú"
+          >
+            <Send className="w-6 h-6 text-white" />
+          </button>
+        )}
+
+        {/* Radial Menu */}
+        {showMenu && (
+          <RadialMenu
+            options={menuOptions}
+            position={position}
+            onSelect={handleOptionSelect}
+            onClose={() => setShowMenu(false)}
+            isMobile={isMobile}
+          />
+        )}
       </div>
     </div>
   );
