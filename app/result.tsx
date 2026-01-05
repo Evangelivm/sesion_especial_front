@@ -135,10 +135,16 @@ export const ResultadosParticipante: React.FC<ResultadosParticipanteProps> = ({
             disabled={
               participanteInfo.asistio === "Si" ||
               isButtonDisabled ||
-              participanteInfo.compania === "SC"
+              participanteInfo.compania === "SC" ||
+              participanteInfo.habitacion === "Sin Habitacion"
             }
           >
-            {participanteInfo.compania === "SC" ? (
+            {participanteInfo.habitacion === "Sin Habitacion" ? (
+              <div className="flex flex-col">
+                <span>Participante sin habitacion,</span>
+                <span>dirigirlo a la mesa de soluciones</span>
+              </div>
+            ) : participanteInfo.compania === "SC" ? (
               <div className="flex flex-col">
                 <span>Participante sin Compañía,</span>
                 <span>dirigirlo a la mesa de soluciones</span>
