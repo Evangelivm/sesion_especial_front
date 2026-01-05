@@ -32,6 +32,9 @@ export default function DireccionPage() {
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
 
+  // Constante para los matrimonios de directores
+  const matrimoniosDirectores = 4; // 2 matrimonios = 4 personas
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -87,8 +90,8 @@ export default function DireccionPage() {
       console.log('Actualización de estadísticas recibida:', data);
       const stats = typeof data === 'string' ? JSON.parse(data) : data;
 
-      setParticipantesAsistieron(stats.participantesAsistieron);
-      setStaffAsistieron(stats.staffAsistieron);
+      setParticipantesAsistieron(stats.participantesAsistieron || 0);
+      setStaffAsistieron(stats.staffAsistieron || 0);
 
       // Actualizar cumpleañeros si vienen en la respuesta
       if (stats.cumpleaneros) {
@@ -238,10 +241,10 @@ export default function DireccionPage() {
             <CardContent>
               <div className="text-center">
                 <p className="text-5xl font-bold text-[#015481]">
-                  {participantesAsistieron + staffAsistieron}
+                  {participantesAsistieron + staffAsistieron + matrimoniosDirectores}
                 </p>
                 <p className="text-sm text-gray-600 mt-2">
-                  Total de personas presentes
+                  Total de personas presentes (incluye 2 matrimonios directores)
                 </p>
               </div>
             </CardContent>

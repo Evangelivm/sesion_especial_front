@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeftRight,
   MoveRight,
@@ -122,6 +123,7 @@ export default function PermutaPage() {
   const [habitacionesCompatibles, setHabitacionesCompatibles] = useState<RoomData[]>([]);
   const [companiaSeleccionada, setCompaniaSeleccionada] = useState<number | null>(null);
   const [habitacionSeleccionada, setHabitacionSeleccionada] = useState<number | null>(null);
+  const [marcarAsistencia, setMarcarAsistencia] = useState<boolean>(false);
   const [mostrarBusquedaCompuesto, setMostrarBusquedaCompuesto] = useState(false);
   const [busquedaCompuesto, setBusquedaCompuesto] = useState("");
   const [visibleCountCompuesto, setVisibleCountCompuesto] = useState(20);
@@ -340,7 +342,8 @@ export default function PermutaPage() {
         const resultado = await cambioCompuestoAPI(
           personaCompuesto.id,
           companiaSeleccionada,
-          habitacionSeleccionada
+          habitacionSeleccionada,
+          marcarAsistencia
         );
 
         toast.success(resultado.mensaje || "Cambio compuesto realizado exitosamente");
@@ -351,6 +354,7 @@ export default function PermutaPage() {
         setPersonaCompuestoFull(null);
         setCompaniaSeleccionada(null);
         setHabitacionSeleccionada(null);
+        setMarcarAsistencia(false);
         setCompaniasCompatibles([]);
         setHabitacionesCompatibles([]);
 
@@ -386,6 +390,7 @@ export default function PermutaPage() {
     setPersonaCompuestoFull(null);
     setCompaniaSeleccionada(null);
     setHabitacionSeleccionada(null);
+    setMarcarAsistencia(false);
     setCompaniasCompatibles([]);
     setHabitacionesCompatibles([]);
   };
@@ -771,10 +776,10 @@ export default function PermutaPage() {
                 )}
 
                 {/* Botones */}
-                <div className="flex gap-2 flex-col sm:flex-row">
+                <div className="flex gap-3 flex-col sm:flex-row">
                   <Button
                     variant="outline"
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto sm:flex-1"
                     onClick={resetIntercambio}
                     disabled={!persona1 && !persona2}
                   >
@@ -782,7 +787,7 @@ export default function PermutaPage() {
                     Limpiar
                   </Button>
                   <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full sm:w-auto sm:flex-1 bg-blue-600 hover:bg-blue-700"
                     onClick={handleIntercambio}
                     disabled={!persona1 || !persona2}
                   >
@@ -975,10 +980,10 @@ export default function PermutaPage() {
                 )}
 
                 {/* Botones */}
-                <div className="flex gap-2 flex-col sm:flex-row">
+                <div className="flex gap-3 flex-col sm:flex-row">
                   <Button
                     variant="outline"
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto sm:flex-1"
                     onClick={resetCambio}
                     disabled={!personaCambio && !nuevaCompaniaId}
                   >
@@ -986,7 +991,7 @@ export default function PermutaPage() {
                     Limpiar
                   </Button>
                   <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full sm:w-auto sm:flex-1 bg-blue-600 hover:bg-blue-700"
                     onClick={handleCambioSimple}
                     disabled={!personaCambio || !nuevaCompaniaId}
                   >
@@ -1190,6 +1195,23 @@ export default function PermutaPage() {
                   </div>
                 )}
 
+                {/* Checkbox para marcar asistencia */}
+                {personaCompuestoFull && companiaSeleccionada && habitacionSeleccionada !== null && (
+                  <div className="flex items-center space-x-2 p-4 bg-green-50 rounded-lg border-2 border-green-200">
+                    <Checkbox
+                      id="marcar-asistencia"
+                      checked={marcarAsistencia}
+                      onCheckedChange={(checked) => setMarcarAsistencia(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="marcar-asistencia"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Marcar asistencia al realizar el cambio
+                    </label>
+                  </div>
+                )}
+
                 {/* Vista Previa */}
                 {personaCompuesto && companiaSeleccionada && habitacionSeleccionada !== null && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
@@ -1227,16 +1249,26 @@ export default function PermutaPage() {
                               : habitacionesCompatibles.find(h => h.id_habitacion === habitacionSeleccionada)?.habitacion}
                           </div>
                         </div>
+                        <div>
+                          <div className="text-xs text-slate-500">Asistencia Actual</div>
+                          <div className="font-medium">{personaCompuestoFull?.asistio || "No"}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500">Nueva Asistencia</div>
+                          <div className={`font-medium ${marcarAsistencia ? 'text-green-600' : 'text-slate-600'}`}>
+                            {marcarAsistencia ? "Sí" : "Sin cambios"}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {/* Acciones */}
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className="w-full sm:w-auto sm:flex-1"
                     onClick={resetCambioCompuesto}
                     disabled={!personaCompuesto}
                   >
@@ -1244,12 +1276,13 @@ export default function PermutaPage() {
                     Limpiar
                   </Button>
                   <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full sm:w-auto sm:flex-1 bg-blue-600 hover:bg-blue-700 text-sm sm:text-base"
                     onClick={handleCambioCompuesto}
                     disabled={!personaCompuesto || !companiaSeleccionada || habitacionSeleccionada === null}
                   >
                     <Users className="h-4 w-4 mr-2" />
-                    Realizar Cambio Compuesto
+                    <span className="hidden sm:inline">Realizar Cambio Compuesto</span>
+                    <span className="sm:hidden">Realizar Cambio</span>
                   </Button>
                 </div>
               </CardContent>
@@ -1304,6 +1337,12 @@ export default function PermutaPage() {
                         <div className="text-slate-500">Habitación:</div>
                         <div>{personaCompuestoFull?.habitacion} → {habitacionSeleccionada === 1 ? "Sin Habitación" : habitacionesCompatibles.find(h => h.id_habitacion === habitacionSeleccionada)?.habitacion}</div>
                       </div>
+                      {marcarAsistencia && (
+                        <div className="col-span-2">
+                          <div className="text-slate-500">Asistencia:</div>
+                          <div className="text-green-600 font-semibold">✓ Se marcará asistencia</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

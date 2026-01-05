@@ -371,13 +371,15 @@ export const getCompanias = async () => {
 export const cambioCompuesto = async (
   personaId: number,
   nuevaCompaniaId: number,
-  nuevaHabitacionId: number
+  nuevaHabitacionId: number,
+  marcarAsistencia?: boolean
 ) => {
   try {
     const response = await axios.post(`${BASE_URL}/permuta/cambio-compuesto`, {
       persona_id: personaId,
       nueva_compania_id: nuevaCompaniaId,
       nueva_habitacion_id: nuevaHabitacionId,
+      marcar_asistencia: marcarAsistencia || false,
     });
     return response.data;
   } catch (error) {
