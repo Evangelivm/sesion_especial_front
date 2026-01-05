@@ -50,13 +50,13 @@ export default function DireccionPage() {
         setParticipantesAsistieron(participantesCount);
         setStaffAsistieron(staffCount);
 
-        // Filtrar cumpleañeros del día
+        // Filtrar cumpleañeros del día que asistieron
         const hoy = new Date();
         const diaHoy = hoy.getDate();
         const mesHoy = hoy.getMonth() + 1; // Los meses en JS van de 0-11
 
         const cumpleanerosHoy = data.filter((p) => {
-          if (!p.nacimiento) return false;
+          if (!p.nacimiento || p.asistio !== "Si") return false;
 
           // Parsear la fecha de nacimiento sin timezone (formato: YYYY-MM-DD)
           // Extraer directamente día y mes de la cadena sin conversiones de timezone

@@ -285,7 +285,7 @@ export default function PermutaPage() {
       return;
     }
 
-    if (!habitacionSeleccionada) {
+    if (habitacionSeleccionada === null) {
       toast.error("Debes seleccionar la nueva habitación");
       return;
     }
@@ -334,7 +334,7 @@ export default function PermutaPage() {
         const data = await getParticipantes();
         setParticipantes(data);
       } else if (mode === "cambio-compuesto") {
-        if (!personaCompuesto || !companiaSeleccionada || !habitacionSeleccionada) return;
+        if (!personaCompuesto || !companiaSeleccionada || habitacionSeleccionada === null) return;
 
         // Llamar al endpoint de cambio compuesto
         const resultado = await cambioCompuestoAPI(
@@ -1139,27 +1139,48 @@ export default function PermutaPage() {
                       Nueva Habitación (Sexo: {personaCompuestoFull.sexo})
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {/* Opción especial: Sin Habitación (id_habitacion = 1) */}
+                      <Button
+                        variant={
+                          habitacionSeleccionada === 1
+                            ? "default"
+                            : "outline"
+                        }
+                        className="h-auto py-3 border-dashed border-2"
+                        onClick={() => setHabitacionSeleccionada(1)}
+                      >
+                        <div className="flex flex-col items-start w-full">
+                          <span className="font-medium">Sin Habitación</span>
+                          <span className="text-xs text-slate-500">
+                            Asignar sin habitación
+                          </span>
+                        </div>
+                      </Button>
+
+                      {/* Habitaciones compatibles (excluyendo la id=1 que ya se muestra arriba) */}
                       {habitacionesCompatibles.length > 0 ? (
-                        habitacionesCompatibles.map((hab) => (
-                          <Button
-                            key={hab.id_habitacion}
-                            variant={
-                              habitacionSeleccionada === hab.id_habitacion
-                                ? "default"
-                                : "outline"
-                            }
-                            className="h-auto py-3"
-                            onClick={() => setHabitacionSeleccionada(hab.id_habitacion)}
-                            disabled={hab.libres === 0}
-                          >
-                            <div className="flex flex-col items-start w-full">
-                              <span className="font-medium">{hab.habitacion}</span>
-                              <span className="text-xs">
-                                Camas: {hab.camas} | Libres: {hab.libres}
-                              </span>
-                            </div>
-                          </Button>
-                        ))
+                        habitacionesCompatibles
+                          .filter((hab) => hab.id_habitacion !== 1)
+                          .map((hab) => (
+                            <Button
+                              key={hab.id_habitacion}
+                              variant={
+                                habitacionSeleccionada === hab.id_habitacion
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="h-auto py-3"
+                              onClick={() => setHabitacionSeleccionada(hab.id_habitacion)}
+                              disabled={hab.libres === 0}
+                            >
+                              <div className="flex flex-col items-start w-full">
+                                <span className="font-medium">{hab.habitacion}</span>
+                                <span className="text-xs">
+                                  Camas: {hab.camas} | Libres: {hab.libres}
+                                </span>
+                              </div>
+                            </Button>
+                          ))
                       ) : (
                         <div className="col-span-full text-center text-sm text-slate-500 py-4">
                           Cargando habitaciones compatibles...
@@ -1170,7 +1191,7 @@ export default function PermutaPage() {
                 )}
 
                 {/* Vista Previa */}
-                {personaCompuesto && companiaSeleccionada && habitacionSeleccionada && (
+                {personaCompuesto && companiaSeleccionada && habitacionSeleccionada !== null && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
                     <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
                       <Check className="h-5 w-5" />
@@ -1201,7 +1222,9 @@ export default function PermutaPage() {
                         <div>
                           <div className="text-xs text-slate-500">Nueva Habitación</div>
                           <div className="font-medium text-green-600">
-                            {habitacionesCompatibles.find(h => h.id_habitacion === habitacionSeleccionada)?.habitacion}
+                            {habitacionSeleccionada === 1
+                              ? "Sin Habitación"
+                              : habitacionesCompatibles.find(h => h.id_habitacion === habitacionSeleccionada)?.habitacion}
                           </div>
                         </div>
                       </div>
@@ -1223,7 +1246,7 @@ export default function PermutaPage() {
                   <Button
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     onClick={handleCambioCompuesto}
-                    disabled={!personaCompuesto || !companiaSeleccionada || !habitacionSeleccionada}
+                    disabled={!personaCompuesto || !companiaSeleccionada || habitacionSeleccionada === null}
                   >
                     <Users className="h-4 w-4 mr-2" />
                     Realizar Cambio Compuesto
@@ -1279,7 +1302,7 @@ export default function PermutaPage() {
                       </div>
                       <div>
                         <div className="text-slate-500">Habitación:</div>
-                        <div>{personaCompuestoFull?.habitacion} → {habitacionesCompatibles.find(h => h.id_habitacion === habitacionSeleccionada)?.habitacion}</div>
+                        <div>{personaCompuestoFull?.habitacion} → {habitacionSeleccionada === 1 ? "Sin Habitación" : habitacionesCompatibles.find(h => h.id_habitacion === habitacionSeleccionada)?.habitacion}</div>
                       </div>
                     </div>
                   </div>
