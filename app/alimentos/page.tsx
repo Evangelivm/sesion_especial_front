@@ -203,13 +203,45 @@ export default function AlimentosPage() {
   const copiarInforme = async () => {
     try {
       const informe = generarInformeDietas();
-      await navigator.clipboard.writeText(informe);
-      setCopied(true);
-      toast.success("Informe copiado al portapapeles");
-      setTimeout(() => setCopied(false), 2000);
+
+      // Intentar primero con la API moderna del Clipboard
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(informe);
+          setCopied(true);
+          toast.success("Informe copiado al portapapeles");
+          setTimeout(() => setCopied(false), 2000);
+          return;
+        } catch (clipboardError) {
+          console.warn("Clipboard API falló, usando método alternativo:", clipboardError);
+        }
+      }
+
+      // Fallback: método compatible con navegadores antiguos y móviles
+      const textArea = document.createElement("textarea");
+      textArea.value = informe;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          setCopied(true);
+          toast.success("Informe copiado al portapapeles");
+          setTimeout(() => setCopied(false), 2000);
+        } else {
+          throw new Error("execCommand falló");
+        }
+      } finally {
+        document.body.removeChild(textArea);
+      }
     } catch (error) {
-      toast.error("Error al copiar el informe");
-      console.error(error);
+      toast.error("Error al copiar el informe. Por favor, copia manualmente.");
+      console.error("Error al copiar:", error);
     }
   };
 
