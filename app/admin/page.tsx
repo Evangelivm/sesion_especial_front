@@ -81,9 +81,26 @@ export default function AdminPage() {
 
   // Initialize WebSocket connection for settings
   useEffect(() => {
+    let hasInitialConnection = false;
+
     socket.on("connect", () => {
       console.log("Connected to WebSocket");
       socket.emit("subscribeToAdminSettings");
+
+      // Notificar reconexión (solo si no es la primera conexión)
+      if (hasInitialConnection) {
+        toast.success("Conexión en tiempo real restablecida");
+      }
+      hasInitialConnection = true;
+    });
+
+    socket.on("disconnect", () => {
+      console.warn("WebSocket desconectado");
+      toast.warning("Conexión en tiempo real perdida");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Error de conexión de WebSocket:", err);
     });
 
     socket.on("admin-settings", (message: string) => {
@@ -100,10 +117,13 @@ export default function AdminPage() {
     // If already connected, subscribe immediately
     if (socket.connected) {
       socket.emit("subscribeToAdminSettings");
+      hasInitialConnection = true;
     }
 
     return () => {
       socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
       socket.off("admin-settings");
     };
   }, []);

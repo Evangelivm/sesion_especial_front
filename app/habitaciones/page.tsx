@@ -77,8 +77,27 @@ export default function HabitacionesPage() {
 
     fetchHabitaciones();
 
-    // Suscribirse a actualizaciones en tiempo real
-    socket.emit("subscribeToChannel", "habitaciones-updates");
+    let hasInitialConnection = false;
+
+    // Manejar conexión
+    socket.on('connect', () => {
+      console.log('WebSocket conectado correctamente');
+      socket.emit("subscribeToChannel", "habitaciones-updates");
+
+      // Notificar reconexión (solo si no es la primera conexión)
+      if (hasInitialConnection) {
+        console.log('Conexión en tiempo real restablecida');
+      }
+      hasInitialConnection = true;
+    });
+
+    socket.on('disconnect', () => {
+      console.warn('WebSocket desconectado');
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Error de conexión de WebSocket:', err);
+    });
 
     socket.on("habitaciones-updates", (message: any) => {
       try {
@@ -90,7 +109,16 @@ export default function HabitacionesPage() {
       }
     });
 
+    // Si ya está conectado, suscribirse inmediatamente
+    if (socket.connected) {
+      socket.emit("subscribeToChannel", "habitaciones-updates");
+      hasInitialConnection = true;
+    }
+
     return () => {
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
       socket.off("habitaciones-updates");
     };
   }, []);

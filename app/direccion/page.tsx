@@ -82,8 +82,27 @@ export default function DireccionPage() {
 
   // WebSocket connection for real-time updates
   useEffect(() => {
-    // Suscribirse al canal cuando el componente se monta
-    socket.emit('subscribeToDireccionStats');
+    let hasInitialConnection = false;
+
+    // Manejar conexión
+    socket.on('connect', () => {
+      console.log('WebSocket conectado correctamente');
+      socket.emit('subscribeToDireccionStats');
+
+      // Notificar reconexión (solo si no es la primera conexión)
+      if (hasInitialConnection) {
+        console.log('Conexión en tiempo real restablecida');
+      }
+      hasInitialConnection = true;
+    });
+
+    socket.on('disconnect', () => {
+      console.warn('WebSocket desconectado');
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Error de conexión de WebSocket:', err);
+    });
 
     // Escuchar actualizaciones de estadísticas
     socket.on('direccion-stats', (data: any) => {
@@ -99,8 +118,17 @@ export default function DireccionPage() {
       }
     });
 
+    // Si ya está conectado, suscribirse inmediatamente
+    if (socket.connected) {
+      socket.emit('subscribeToDireccionStats');
+      hasInitialConnection = true;
+    }
+
     // Cleanup al desmontar
     return () => {
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
       socket.off('direccion-stats');
     };
   }, []);

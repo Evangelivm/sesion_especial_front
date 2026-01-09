@@ -26,6 +26,7 @@ import {
   Check,
 } from "lucide-react";
 import { socket } from "@/lib/socket";
+import { getAlimentosStats } from "@/lib/connections";
 import { toast } from "sonner";
 
 interface ParticipanteStats {
@@ -57,9 +58,72 @@ export default function AlimentosPage() {
   const [participantes, setParticipantes] = useState<ParticipanteStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
 
   useEffect(() => {
     const channel = "alimentos-stats";
+    let timeoutId: NodeJS.Timeout;
+    let dataReceived = false;
+
+    // Función para obtener datos mediante API REST (fallback)
+    const fetchDataFromAPI = async () => {
+      try {
+        console.log("Obteniendo datos mediante API REST...");
+        const data = await getAlimentosStats();
+        setParticipantes(Array.isArray(data) ? data : []);
+        setLoading(false);
+        setError(null);
+        console.log("Datos obtenidos exitosamente mediante API REST");
+      } catch (error) {
+        console.error("Error al obtener datos de la API:", error);
+        setError("No se pudieron cargar los datos. Por favor, verifica tu conexión.");
+        setLoading(false);
+        toast.error("Error al cargar los datos");
+      }
+    };
+
+    // Timeout de 10 segundos: si no llegan datos por WebSocket, usar API REST
+    timeoutId = setTimeout(() => {
+      if (!dataReceived) {
+        console.warn("Timeout de WebSocket alcanzado, usando API REST como fallback");
+        toast.info("Cargando datos mediante método alternativo...");
+        fetchDataFromAPI();
+      }
+    }, 10000);
+
+    // Manejo de eventos de conexión del socket
+    socket.on("connect", () => {
+      console.log("WebSocket conectado correctamente");
+      setConnectionStatus("connected");
+      setError(null);
+
+      // Re-suscribirse al canal cuando se reconecta
+      console.log("Re-suscribiendo al canal de alimentos...");
+      socket.emit("subscribeToAlimentosStats");
+
+      // Notificar al usuario que la conexión se restableció
+      if (dataReceived) {
+        toast.success("Conexión en tiempo real restablecida");
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.warn("WebSocket desconectado");
+      setConnectionStatus("disconnected");
+      toast.warning("Conexión en tiempo real perdida");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Error de conexión de WebSocket:", err);
+      setConnectionStatus("disconnected");
+      // Si hay error de conexión y aún está cargando, usar fallback inmediatamente
+      if (loading && !dataReceived) {
+        console.log("Error de conexión, usando API REST inmediatamente");
+        clearTimeout(timeoutId);
+        fetchDataFromAPI();
+      }
+    });
 
     // Suscribirse al canal de WebSocket
     socket.emit("subscribeToAlimentosStats");
@@ -75,6 +139,9 @@ export default function AlimentosPage() {
 
         setParticipantes(data);
         setLoading(false);
+        setError(null);
+        dataReceived = true;
+        clearTimeout(timeoutId);
 
         console.log("Datos de alimentos actualizados en tiempo real");
       } catch (error) {
@@ -86,14 +153,23 @@ export default function AlimentosPage() {
     // Manejar errores de conexión
     socket.on("error", (error: any) => {
       console.error("Error de WebSocket:", error);
-      toast.error("Error de conexión con el servidor");
-      setLoading(false);
+      setError("Error de conexión en tiempo real");
+
+      // Si aún está cargando y no se han recibido datos, usar fallback
+      if (loading && !dataReceived) {
+        clearTimeout(timeoutId);
+        fetchDataFromAPI();
+      }
     });
 
     // Cleanup al desmontar el componente
     return () => {
+      clearTimeout(timeoutId);
       socket.off(channel);
       socket.off("error");
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
     };
   }, []);
 
@@ -248,7 +324,17 @@ export default function AlimentosPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#F5AB04] to-[#01667C] flex items-center justify-center">
-        <div className="text-white text-xl">Cargando datos...</div>
+        <Card className="bg-white/95 backdrop-blur p-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#01667C]"></div>
+            <div className="text-slate-700 text-lg font-medium">Cargando datos...</div>
+            <div className="text-slate-500 text-sm">
+              {connectionStatus === "connecting" && "Conectando al servidor..."}
+              {connectionStatus === "connected" && "Esperando datos..."}
+              {connectionStatus === "disconnected" && "Intentando conexión alternativa..."}
+            </div>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -275,6 +361,31 @@ export default function AlimentosPage() {
           </div>
         </div>
       </header>
+
+      {/* Banner de estado de conexión */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            <div>
+              <p className="text-red-800 font-medium">Error de conexión</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {connectionStatus === "disconnected" && !error && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 m-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-500" />
+            <div>
+              <p className="text-yellow-800 font-medium">Conexión en tiempo real desconectada</p>
+              <p className="text-yellow-600 text-sm">Los datos no se actualizarán automáticamente. Recarga la página para obtener datos actualizados.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="container mx-auto p-4 max-w-6xl space-y-6">

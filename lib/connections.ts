@@ -201,6 +201,28 @@ export const getStats = async (): Promise<ParticipanteStats[]> => {
   }
 };
 
+// Función para obtener las estadísticas de alimentos
+export const getAlimentosStats = async (): Promise<ParticipanteStats[]> => {
+  try {
+    console.log("Iniciando obtención de estadísticas de alimentos");
+    const response = await axios.get(`${BASE_URL}/stats/alimentos/stats`);
+    console.log("Datos de alimentos recibidos:", response.data);
+
+    if (!response.data) {
+      throw new Error("No se encontraron datos de alimentos");
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener estadísticas de alimentos:", error);
+    if (axios.isAxiosError(error)) {
+      console.error("Status:", error.response?.status);
+      console.error("Mensaje:", error.response?.data);
+    }
+    throw error;
+  }
+};
+
 // Función para agregar un nuevo medicamento al inventario
 export const agregarMedicamento = async (
   nombre: string,

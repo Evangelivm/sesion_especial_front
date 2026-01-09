@@ -66,8 +66,26 @@ function Comproom({
     const companyChannel = `summary-age-${edad}`;
     const roomChannel = `rooms-age-${edad}-${genero}`;
 
-    // Emitir suscripción para compañías
-    socket.emit("subscribeToChannel", companyChannel);
+    const subscribeToChannels = () => {
+      // Emitir suscripción para compañías
+      socket.emit("subscribeToChannel", companyChannel);
+      // Emitir suscripción para habitaciones
+      socket.emit("subscribeToChannel", roomChannel);
+    };
+
+    // Manejar reconexión
+    const handleConnect = () => {
+      console.log("WebSocket reconectado, re-suscribiendo a canales...");
+      subscribeToChannels();
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', () => {
+      console.warn('WebSocket desconectado');
+    });
+    socket.on('connect_error', (err) => {
+      console.error('Error de conexión de WebSocket:', err);
+    });
 
     // Manejar mensajes nuevos para compañías
     socket.on(companyChannel, (message: any) => {
@@ -104,9 +122,6 @@ function Comproom({
         console.error("Error al parsear mensaje:", error);
       }
     });
-
-    // Emitir suscripción para habitaciones
-    socket.emit("subscribeToChannel", roomChannel);
 
     // Manejar mensajes nuevos para habitaciones
     socket.on(roomChannel, (message: any) => {
@@ -147,8 +162,16 @@ function Comproom({
       }
     });
 
+    // Suscribirse inicialmente (si ya está conectado o cuando se conecte)
+    if (socket.connected) {
+      subscribeToChannels();
+    }
+
     // Cleanup
     return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect');
+      socket.off('connect_error');
       socket.off(companyChannel);
       socket.off(roomChannel);
     };

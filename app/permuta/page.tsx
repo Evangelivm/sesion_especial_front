@@ -184,8 +184,27 @@ export default function PermutaPage() {
     const companyChannel = `summary-age-${edad}`;
     const roomChannel = `rooms-age-${edad}-${genero}`;
 
-    // Suscribirse a compañías compatibles
-    socket.emit("subscribeToChannel", companyChannel);
+    const subscribeToChannels = () => {
+      // Suscribirse a compañías compatibles
+      socket.emit("subscribeToChannel", companyChannel);
+      // Suscribirse a habitaciones compatibles
+      socket.emit("subscribeToChannel", roomChannel);
+    };
+
+    // Manejar reconexión
+    const handleConnect = () => {
+      console.log("WebSocket reconectado, re-suscribiendo a canales...");
+      subscribeToChannels();
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', () => {
+      console.warn('WebSocket desconectado');
+    });
+    socket.on('connect_error', (err) => {
+      console.error('Error de conexión de WebSocket:', err);
+    });
+
     socket.on(companyChannel, (message: any) => {
       try {
         const parsedMessage = typeof message === "string" ? JSON.parse(message) : message;
@@ -208,8 +227,6 @@ export default function PermutaPage() {
       }
     });
 
-    // Suscribirse a habitaciones compatibles
-    socket.emit("subscribeToChannel", roomChannel);
     socket.on(roomChannel, (message: any) => {
       try {
         const parsedMessage = typeof message === "string" ? JSON.parse(message) : message;
@@ -235,8 +252,16 @@ export default function PermutaPage() {
       }
     });
 
+    // Suscribirse inicialmente (si ya está conectado o cuando se conecte)
+    if (socket.connected) {
+      subscribeToChannels();
+    }
+
     // Cleanup
     return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect');
+      socket.off('connect_error');
       socket.off(companyChannel);
       socket.off(roomChannel);
     };

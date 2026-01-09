@@ -94,7 +94,27 @@ function App() {
 
   useEffect(() => {
     const channel = "participantes-ordenados";
-    socket.emit("subscribeToParticipantesOrdenados", channel);
+    let hasInitialConnection = false;
+
+    // Manejar conexión
+    socket.on('connect', () => {
+      console.log('WebSocket conectado correctamente');
+      socket.emit("subscribeToParticipantesOrdenados", channel);
+
+      // Notificar reconexión (solo si no es la primera conexión)
+      if (hasInitialConnection) {
+        console.log('Conexión en tiempo real restablecida');
+      }
+      hasInitialConnection = true;
+    });
+
+    socket.on('disconnect', () => {
+      console.warn('WebSocket desconectado');
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Error de conexión de WebSocket:', err);
+    });
 
     socket.on(channel, (message: any) => {
       try {
@@ -181,7 +201,16 @@ function App() {
       }
     });
 
+    // Si ya está conectado, suscribirse inmediatamente
+    if (socket.connected) {
+      socket.emit("subscribeToParticipantesOrdenados", channel);
+      hasInitialConnection = true;
+    }
+
     return () => {
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
       socket.off(channel);
     };
   }, []);

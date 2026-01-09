@@ -29,9 +29,25 @@ export default function AsistenciaPage() {
 
   // Initialize WebSocket connection
   useEffect(() => {
+    let hasInitialConnection = false;
+
     socket.on("connect", () => {
       console.log("Connected to WebSocket");
       socket.emit("subscribeToAdminSettings");
+
+      // Notificar reconexión (solo si no es la primera conexión)
+      if (hasInitialConnection) {
+        console.log("Conexión en tiempo real restablecida");
+      }
+      hasInitialConnection = true;
+    });
+
+    socket.on("disconnect", () => {
+      console.warn("WebSocket desconectado");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Error de conexión de WebSocket:", err);
     });
 
     socket.on("admin-settings", (message: string) => {
@@ -47,10 +63,13 @@ export default function AsistenciaPage() {
     // If already connected, subscribe immediately
     if (socket.connected) {
       socket.emit("subscribeToAdminSettings");
+      hasInitialConnection = true;
     }
 
     return () => {
       socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
       socket.off("admin-settings");
     };
   }, []);
